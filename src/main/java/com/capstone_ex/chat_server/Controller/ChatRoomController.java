@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chatroom")
@@ -43,14 +44,16 @@ public class ChatRoomController {
     }
 
     @PostMapping("/{chatRoomId}/addUser")
-    public ResponseEntity<Void> addUserToChatRoom(@PathVariable Long chatRoomId, @RequestBody String email) {
+    public ResponseEntity<Void> addUserToChatRoom(@PathVariable Long chatRoomId, @RequestBody Map<String, String> request) {
+        String email = request.get("email");
         UserInfoEntity user = userInfoService.getUserByEmail(email);
         chatRoomService.addUserToChatRoom(user, chatRoomId);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{chatRoomId}/removeUser")
-    public ResponseEntity<Void> removeUserFromChatRoom(@PathVariable Long chatRoomId, @RequestBody String email) {
+    public ResponseEntity<Void> removeUserFromChatRoom(@PathVariable Long chatRoomId, @RequestBody Map<String, String> request) {
+        String email = request.get("email");
         UserInfoEntity user = userInfoService.getUserByEmail(email);
         chatRoomService.removeUserFromChatRoom(user, chatRoomId);
         return ResponseEntity.ok().build();

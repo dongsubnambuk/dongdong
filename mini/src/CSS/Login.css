@@ -1,0 +1,88 @@
+.login-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative; 
+    padding: 10px;
+    border-bottom: 1px solid #000; 
+}
+
+.back-btn {
+    position: absolute;
+    left: 5%;
+    cursor: pointer;
+}
+
+.login-topbar h2 {
+    margin: 0; 
+    text-align: center; /* 중앙 정렬 */
+    flex: 1; 
+}
+
+.login-inner{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    padding-top: 30px;
+}
+
+.logoImage-login{
+    width: 25%;
+}
+
+.login-email{
+    margin-top: 20px;
+}
+.login-password,
+.login-email{
+    box-sizing: border-box;
+    width: 80%;
+    height: 6vh;
+    background: #FFFFFF;
+    border: 1px solid #000000;
+    border-radius: 7px;
+    margin-bottom: 11px;
+}
+
+
+.login-btn{
+    cursor: pointer;
+    width: 80%;
+    height: 6vh;
+    background: rgba(4, 198, 0);
+    border-radius: 7px;
+    border: none;
+    font-size: 20px;
+    margin-top: 20px;
+    color: white;
+    font-weight: bold;
+}
+
+.login-options {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    gap: 120px;
+}
+
+.login-options label,
+.login-options a {
+    font-size: 10px;
+}
+
+.login-options a {
+    text-decoration: none;
+    color: black;
+}
+
+.signup-link {
+    margin-top: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.signup-link span {
+    cursor: pointer;
+    color: rgba(4, 198, 0, 1); /* 네 번째 인수로 알파 값을 추가합니다 */
+}

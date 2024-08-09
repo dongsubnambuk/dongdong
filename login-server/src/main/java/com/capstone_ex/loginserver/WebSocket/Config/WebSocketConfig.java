@@ -29,6 +29,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new UserWebSocketHandler(userService, customUserDetailsService, jwtTokenUtil, objectMapper), "/ws/user")
-                .setAllowedOrigins("http://chatex.p-e.kr:10000"); // 허용할 프론트엔드 URL
+                .setAllowedOrigins("http://192.168.0.6:3000", "http://localhost:3000"); // 허용할 프론트엔드 URL
     }
 }

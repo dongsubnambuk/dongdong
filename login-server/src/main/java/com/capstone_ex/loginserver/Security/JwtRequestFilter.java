@@ -55,4 +55,12 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
         chain.doFilter(request, response);
     }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        // /api/login, /api/register 경로에 대해 JWT 필터 적용하지 않음
+        return path.equals("/api/login") || path.equals("/api/register");
+    }
+
 }

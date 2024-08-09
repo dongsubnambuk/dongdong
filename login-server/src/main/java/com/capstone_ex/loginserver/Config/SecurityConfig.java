@@ -4,10 +4,12 @@ import com.capstone_ex.loginserver.Security.JwtRequestFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,19 +34,12 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/auth/**", "/register", "/login", "/api", "/api/users").permitAll() // /api 경로에 대한 접근 허용
-                                .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 모든 OPTIONS 요청 허용
+                                .requestMatchers("/api/login", "/api/register", "/api/user", "/api", "/api/users").permitAll() // 로그인과 회원가입 경로는 인증 없이 접근 허용
+                                .requestMatchers("/api/**").authenticated() // 그 외의 /api/** 경로는 인증 필요
+                                .anyRequest().authenticated()
                 )
-                .formLogin(form -> form
-                        .loginPage("/login") // 사용자 정의 로그인 페이지 경로
-                        .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout")
-                        .permitAll()
-                )
-                .csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화 (특히 REST API에서는 비활성화 필요)
+                .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // CORS 설정
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class); // JWT 필터 추가
 
@@ -65,13 +60,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Collections.singletonList("http://chatex.p-e.kr:10000")); // 프론트엔드 주소
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedOrigins(Arrays.asList("http://192.168.0.6:3000", "http://localhost:3000"));
+        configuration.addAllowedMethod("*"); // 모든 HTTP 메서드 허용
+        configuration.addAllowedHeader("*"); // 모든 헤더 허용
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
 }

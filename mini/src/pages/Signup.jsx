@@ -29,7 +29,7 @@ function Signup(){
     const handleSignup = async (event) => {
         event.preventDefault();
 
-        const response = await fetch('', { // 서버 URL을 실제 API 엔드포인트로 변경하세요
+        const response = await fetch('http://chatex.p-e.kr:10000/api/register', { 
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -42,12 +42,13 @@ function Signup(){
         });
 
         const result = await response.json(); // 응답이 JSON 형식일 경우 이를 JavaScript 객체로 변환
-
-        if (response.status === 201) { // 응답 status가 200 OK 일 경우
-            // 회원가입 성공 후 로직
+      
+        if (response.status === 200) { // 응답 status가 200 OK 일 경우
+          
+            console.log(result);
             console.log("회원가입 성공");
             alert("회원가입 성공");
-            navigate('/'); // 회원가입 성공 후 메인 페이지로 이동
+            navigate('/'); 
         } else {
             console.log("회원가입 실패");
             alert("회원가입 실패: " + result.message);
@@ -106,7 +107,7 @@ function Signup(){
                     type="text"
                     id="nickname"
                     value={nickname}
-                    placeholder="이름을 입력해주세요."
+                    placeholder="닉네임을 입력해주세요."
                     onChange={(e) => setNickname(e.target.value)}
                 />
              

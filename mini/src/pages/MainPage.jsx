@@ -8,17 +8,40 @@ const MainPage = () => {
   const [nickname, setNickname] = useState(null);
 
   useEffect(() => {
-    // 로그인 상태를 확인하여 닉네임을 설정
-    const storedNickname = localStorage.getItem('nickname');
-    if (storedNickname) {
-      setNickname(storedNickname);
+    const token = localStorage.getItem("token");
+    const email = localStorage.getItem("email");
+
+    // 로그인한 경우에만 fetch 요청을 보냄
+    if (token && email) {
+      const handleget = async () => {
+        const response = await fetch(`http://chatex.p-e.kr:10000/api/user?email=${email}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token,
+          }
+        });
+  
+        const result = await response.json(); // 응답이 JSON 형식일 경우 이를 JavaScript 객체로 변환
+  
+        if (response.status === 200) { // 응답 status가 200 OK 일 경우
+          setNickname(result.nickname);
+        } else {
+          console.log("사용자 정보 가져오기 실패");
+          alert("사용자 정보 가져오기 실패: " + result.message);
+        }
+      };
+  
+      handleget();
     }
-  }, []);
+  }, []); // 빈 배열을 두어 컴포넌트가 마운트될 때만 실행되도록 함
 
   const handleLogout = () => {
     localStorage.removeItem('nickname');
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
     setNickname(null);
-    navigate('/login');
+    navigate('/');
   };
 
   const handleChatButtonClick = () => {
@@ -77,7 +100,6 @@ const styles = {
     backgroundColor: '#f0f8ff', // 전체 배경 색상
     borderRadius: '8px',
     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-
   },
   authButtons: {
     marginBottom: '20px',

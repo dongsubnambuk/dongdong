@@ -25,7 +25,7 @@ function Login() {
         event.preventDefault();
     
         try {
-            const response = await fetch('', {
+            const response = await fetch('http://chatex.p-e.kr:10000/api/login', {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -39,18 +39,12 @@ function Login() {
             const result = await response.json();
     
             if (response.status === 200) {
+                console.log(result);
                 localStorage.setItem("token", result.token);
-                localStorage.setItem("email", result.email);
-                localStorage.setItem("role", result.role);
-
-    
-
-    
-                if (result.role === 'ROLE_ADMIN') {
-                    navigate('/admin');
-                } else {
-                    navigate('/');
-                }
+                localStorage.setItem("email", result.user.email);
+                localStorage.setItem("nickname", result.user.nickname);
+                console.log("로그인 성공");
+                navigate('/'); 
             } else {
                 console.log("로그인 실패");
                 alert("로그인 실패: " + result.message);
@@ -65,7 +59,7 @@ function Login() {
         
 
             <div className="login-inner">
-                <input type="text" id="username" value={email} className="login-email" placeholder="아이디" onChange={changeEmail} />
+                <input type="text" id="email" value={email} className="login-email" placeholder="아이디" onChange={changeEmail} />
                 <input type="password" id="password" value={password} className="login-password" placeholder="비밀번호" onChange={changePassword} />
 
                 <button className="login-btn" onClick={handleLogin}>로그인</button>

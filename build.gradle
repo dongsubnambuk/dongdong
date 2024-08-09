@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.3.2'
+	id 'org.springframework.boot' version '3.1.5'
 	id 'io.spring.dependency-management' version '1.1.6'
 }
 
@@ -21,6 +21,10 @@ configurations {
 
 repositories {
 	mavenCentral()
+}
+
+ext {
+	set('springCloudVersion', "2022.0.4")
 }
 
 dependencies {
@@ -45,6 +49,18 @@ dependencies {
 
 	//Rest API
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	//eureka
+	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+	//mariadb
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
 }
 
 tasks.named('test') {

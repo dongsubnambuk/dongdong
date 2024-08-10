@@ -7,8 +7,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,8 +44,23 @@ public class UserService {
                 .orElseThrow(() -> new UsernameNotFoundException("해당 이메일을 가진 사용자를 찾을 수 없습니다."));
     }
 
+    public UserEntity getUserByUniqueId(String uniqueId) {
+        return userRepository.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new UsernameNotFoundException("해당 고유 ID를 가진 사용자를 찾을 수 없습니다."));
+    }
+
     public List<UserEntity> getAllUsers() {
         return userRepository.findAll();
     }
 
+    public List<Map<String, String>> getAllNicknamesWithIds() {
+        return userRepository.findAll().stream()
+                .map(user -> {
+                    Map<String, String> map = new HashMap<>();
+                    map.put("nickname", user.getNickname());
+                    map.put("uniqueId", user.getUniqueId());
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
 }

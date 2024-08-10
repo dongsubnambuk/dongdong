@@ -35,20 +35,16 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> createAuthenticationToken(@RequestBody UserEntity user) throws AuthenticationException {
-        // 사용자 인증
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
 
-        // 사용자 정보 로드
         final UserDetails userDetails = customUserDetailsService.loadUserByUsername(user.getEmail());
         final String token = jwtTokenUtil.generateToken(userDetails.getUsername());
 
-        // 사용자 정보 가져오기
         UserEntity loggedInUser = userService.getUserByEmail(user.getEmail());
 
-        // 응답에 토큰과 사용자 정보 포함
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
-        response.put("user", loggedInUser);  // 사용자 정보를 'user' 키로 포함
+        response.put("user", loggedInUser);
 
         return ResponseEntity.ok(response);
     }
@@ -58,6 +54,7 @@ public class UserController {
         List<UserEntity> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
     }
+
     @GetMapping
     public ResponseEntity<String> apiRoot() {
         return ResponseEntity.ok("success");
@@ -69,4 +66,15 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    @GetMapping("/nicknames")
+    public ResponseEntity<List<Map<String, String>>> getAllNicknamesWithIds() {
+        List<Map<String, String>> nicknamesWithIds = userService.getAllNicknamesWithIds();
+        return ResponseEntity.ok(nicknamesWithIds);
+    }
+
+    @GetMapping("/user/id")
+    public ResponseEntity<?> getUserByUniqueId(@RequestParam String uniqueId) {
+        UserEntity user = userService.getUserByUniqueId(uniqueId);
+        return ResponseEntity.ok(user);
+    }
 }

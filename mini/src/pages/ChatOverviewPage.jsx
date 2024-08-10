@@ -1,41 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SockJS from 'sockjs-client';
-import { Stomp } from '@stomp/stompjs';
 
 const ChatOverviewPage = () => {
   const navigate = useNavigate();
-  const [chats, setChats] = useState([
-    { id: 1, participants: ['User1', 'User2'], lastMessage: 'Hello!', unreadCount: 0 },
-    { id: 2, participants: ['User3', 'User1'], lastMessage: 'How are you?', unreadCount: 0 },
-  ]);
+  const [chats, setChats] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [newChatName, setNewChatName] = useState('');
+  const [newChatDescription, setNewChatDescription] = useState('');
+  const [activeTab, setActiveTab] = useState('chats'); // 탭 상태 관리
 
   useEffect(() => {
-    // WebSocket 연결 설정
-    const socket = new SockJS('http://localhost:8080/ws');
-    const stompClient = Stomp.over(socket);
+    // 모든 채팅방 조회 API 호출
+    fetch('/api/chatroom/all')
+      .then(response => response.json())
+      .then(data => setChats(data))
+      .catch(error => console.error('채팅방 목록을 불러오는 중 오류 발생:', error));
 
-    stompClient.connect({}, () => {
-      // 모든 채팅방에 대한 메시지 구독
-      chats.forEach(chat => {
-        stompClient.subscribe(`/topic/chat/${chat.id}`, (message) => {
-          onMessageReceived(chat.id, JSON.parse(message.body));
-        });
-      });
-    });
+    // 사용자 목록 조회 API 호출
+    fetch('http://chatex.p-e.kr:10000/api/users')
+      .then(response => response.json())
+      .then(data => setUsers(data))
+      .catch(error => console.error('사용자 목록을 불러오는 중 오류 발생:', error));
+  }, []);
 
-    return () => {
-      if (stompClient) {
-        stompClient.disconnect();
-      }
+  const handleCreateChat = () => {
+    const loggedInUser = {
+      userId: '로그인된 유저의 해시코드',  // 실제 로그인된 유저 정보를 여기에 적용해야 합니다.
+      nickname: '로그인된 유저의 닉네임',
+      email: '로그인된 유저의 이메일'
     };
-  }, [chats]);
 
-  const onMessageReceived = (chatId, message) => {
-    // 새 메시지를 받은 채팅방의 unreadCount 증가
-    setChats(prevChats => prevChats.map(chat => 
-      chat.id === chatId ? { ...chat, lastMessage: message.text, unreadCount: chat.unreadCount + 1 } : chat
-    ));
+    const newChat = {
+      chatName: newChatName,
+      description: newChatDescription,
+      creatorInfo: loggedInUser
+    };
+
+    fetch('http://chatex.p-e.kr:11000/api/chatroom', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(newChat)
+    })
+    .then(response => response.json())
+    .then(data => {
+      setChats(prevChats => [...prevChats, data]);
+      setNewChatName('');
+      setNewChatDescription('');
+    })
+    .catch(error => console.error('채팅방 생성 중 오류 발생:', error));
   };
 
   const openChat = (chatId) => {
@@ -46,22 +60,103 @@ const ChatOverviewPage = () => {
     navigate(`/chat/${chatId}`);
   };
 
+  const startChatWithUser = (user) => {
+    const loggedInUser = {
+      userId: '로그인된 유저의 해시코드',  // 실제 로그인된 유저 정보를 여기에 적용해야 합니다.
+      nickname: '로그인된 유저의 닉네임',
+      email: '로그인된 유저의 이메일'
+    };
+
+    const newChat = {
+      chatName: `${loggedInUser.nickname} & ${user.nickname}`,
+      description: `Chat between ${loggedInUser.nickname} and ${user.nickname}`,
+      creatorInfo: loggedInUser
+    };
+
+    fetch('http://chatex.p-e.kr:11000/api/chatroom', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(newChat)
+    })
+    .then(response => response.json())
+    .then(data => {
+      setChats(prevChats => [...prevChats, data]);
+      navigate(`/chat/${data.id}`);
+    })
+    .catch(error => console.error('채팅방 생성 중 오류 발생:', error));
+  };
+
   return (
     <div style={styles.container}>
       <h2 style={styles.header}>채팅</h2>
-      <ul style={styles.chatList}>
-        {chats.map((chat) => (
-          <li key={chat.id} style={styles.chatItem} onClick={() => openChat(chat.id)}>
-            <div style={styles.chatInfo}>
-              <p style={styles.participants}>{chat.participants.join(', ')}</p>
-              <p style={styles.lastMessage}>{chat.lastMessage}</p>
+      <div style={styles.tabContainer}>
+        <button 
+          style={activeTab === 'chats' ? styles.activeTab : styles.tab} 
+          onClick={() => setActiveTab('chats')}
+        >
+          채팅방
+        </button>
+        <button 
+          style={activeTab === 'users' ? styles.activeTab : styles.tab} 
+          onClick={() => setActiveTab('users')}
+        >
+          회원가입된 유저
+        </button>
+      </div>
+
+      {activeTab === 'chats' ? (
+        <>
+          <ul style={styles.chatList}>
+            {chats.map((chat) => (
+              <li key={chat.id} style={styles.chatItem} onClick={() => openChat(chat.id)}>
+                <div style={styles.chatInfo}>
+                  <p style={styles.participants}>{chat.chatName}</p>
+                  <p style={styles.lastMessage}>{chat.lastMessage}</p>
+                </div>
+                {chat.unreadCount > 0 && (
+                  <div style={styles.unreadCount}>{chat.unreadCount}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <button onClick={() => setActiveTab('create')} style={styles.addButton}>+</button>
+          {activeTab === 'create' && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modalContent}>
+                <input 
+                  type="text"
+                  value={newChatName}
+                  onChange={(e) => setNewChatName(e.target.value)}
+                  placeholder="채팅방 이름"
+                  style={styles.input}
+                />
+                <input 
+                  type="text"
+                  value={newChatDescription}
+                  onChange={(e) => setNewChatDescription(e.target.value)}
+                  placeholder="채팅방 설명"
+                  style={styles.input}
+                />
+                <button onClick={handleCreateChat} style={styles.createButton}>채팅방 생성</button>
+                <button onClick={() => setActiveTab('chats')} style={styles.cancelButton}>취소</button>
+              </div>
             </div>
-            {chat.unreadCount > 0 && (
-              <div style={styles.unreadCount}>{chat.unreadCount}</div>
-            )}
-          </li>
-        ))}
-      </ul>
+          )}
+        </>
+      ) : (
+        <ul style={styles.userList}>
+          {users.map(user => (
+            <li key={user.userId} style={styles.userItem}>
+              <p>{user.nickname}</p>
+              <button style={styles.chatButton} onClick={() => startChatWithUser(user)}>
+                채팅하기
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
@@ -78,6 +173,56 @@ const styles = {
     fontSize: '24px',
     fontWeight: 'bold',
     marginBottom: '20px',
+  },
+  tabContainer: {
+    display: 'flex',
+    marginBottom: '20px',
+  },
+  tab: {
+    flex: 1,
+    padding: '10px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #ddd',
+    borderRadius: '8px 8px 0 0',
+    cursor: 'pointer',
+    textAlign: 'center',
+  },
+  activeTab: {
+    flex: 1,
+    padding: '10px',
+    backgroundColor: '#61dafb',
+    border: '1px solid #ddd',
+    borderBottom: 'none',
+    borderRadius: '8px 8px 0 0',
+    cursor: 'pointer',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  newChatContainer: {
+    display: 'flex',
+    marginBottom: '20px',
+  },
+  input: {
+    flex: 1,
+    padding: '10px',
+    borderRadius: '8px',
+    border: '1px solid #ddd',
+    marginRight: '10px',
+  },
+  createButton: {
+    padding: '10px 20px',
+    borderRadius: '8px',
+    backgroundColor: '#61dafb',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  cancelButton: {
+    padding: '10px 20px',
+    borderRadius: '8px',
+    backgroundColor: '#ccc',
+    border: 'none',
+    cursor: 'pointer',
+    marginTop: '10px'
   },
   chatList: {
     listStyleType: 'none',
@@ -117,6 +262,65 @@ const styles = {
     padding: '5px 10px',
     fontSize: '12px',
     fontWeight: 'bold',
+  },
+  userList: {
+    listStyleType: 'none',
+    padding: '0',
+    margin: '0',
+    flex: 1,
+    overflowY: 'auto', // 사용자 목록 스크롤 가능하게 설정
+  },
+  userItem: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '15px',
+    backgroundColor: '#ffffff', // 각 사용자 아이템의 배경 색상
+    borderRadius: '8px',
+    marginBottom: '10px',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // 약간의 그림자 추가
+  },
+  chatButton: {
+    padding: '10px 20px',
+    borderRadius: '8px',
+    backgroundColor: '#61dafb',
+    border: 'none',
+    cursor: 'pointer',
+  },
+  addButton: {
+    padding: '10px',
+    borderRadius: '50%',
+    backgroundColor: '#61dafb',
+    border: 'none',
+    cursor: 'pointer',
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    fontSize: '24px',
+    color: 'white',
+    width: '50px',
+    height: '50px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    display: 'flex',
+    flexDirection: 'column',
   },
 };
 

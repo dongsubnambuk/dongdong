@@ -9,10 +9,13 @@ const ChatPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const messageEndRef = useRef(null);
   const stompClient = useRef(null);
+  const loggedInUser = {
+    nickname: '로그인된 유저의 닉네임' // 실제 로그인된 유저의 닉네임을 가져와야 합니다.
+  };
 
   useEffect(() => {
     // WebSocket 연결 설정
-    const socket = new SockJS('http://localhost:8080/ws');
+    const socket = new SockJS('http://chatex.p-e.kr:11000/ws');
     stompClient.current = Stomp.over(socket);
 
     stompClient.current.connect({}, () => {
@@ -36,7 +39,7 @@ const ChatPage = () => {
   const handleSendMessage = () => {
     if (newMessage.trim() !== '') {
       const chatMessage = {
-        sender: 'You', // 실제로는 사용자 정보에서 닉네임을 가져오는 것이 좋습니다.
+        sender: loggedInUser.nickname,
         text: newMessage,
         roomId: id
       };
@@ -63,8 +66,8 @@ const ChatPage = () => {
             key={index}
             style={{
               ...styles.message,
-              alignSelf: msg.sender === 'You' ? 'flex-end' : 'flex-start',
-              backgroundColor: msg.sender === 'You' ? '#dcf8c6' : '#ffffff',
+              alignSelf: msg.sender === loggedInUser.nickname ? 'flex-end' : 'flex-start',
+              backgroundColor: msg.sender === loggedInUser.nickname ? '#dcf8c6' : '#ffffff',
             }}
           >
             {msg.text}
@@ -93,7 +96,6 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
-    // backgroundColor: '#e1e1e1',
   },
   chatContainer: {
     flex: 1,

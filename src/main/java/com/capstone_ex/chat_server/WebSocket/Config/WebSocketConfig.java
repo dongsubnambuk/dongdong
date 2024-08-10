@@ -1,28 +1,25 @@
 package com.capstone_ex.chat_server.WebSocket.Config;
 
+import com.capstone_ex.chat_server.WebSocket.Handler.ChatWebSocketHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 @Configuration
-@EnableWebSocketMessageBroker
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+@EnableWebSocket
+public class WebSocketConfig implements WebSocketConfigurer {
 
-    @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Enable a simple in-memory message broker
-        config.enableSimpleBroker("/topic");
-        // Prefix for messages bound for methods annotated with @MessageMapping
-        config.setApplicationDestinationPrefixes("/app");
+    private final ObjectMapper objectMapper;
+
+    public WebSocketConfig(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://192.168.0.6:3000", "http://localhost:3000") // Frontend URL, "http://127.0.0.1"
-                .withSockJS();
-
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(new ChatWebSocketHandler(objectMapper), "/ws/chat")
+                .setAllowedOrigins("http://192.168.0.6:3000", "http://localhost:3000"); // 허용할 프론트엔드 URL
     }
 }

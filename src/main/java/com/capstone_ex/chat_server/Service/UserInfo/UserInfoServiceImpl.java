@@ -1,10 +1,8 @@
 package com.capstone_ex.chat_server.Service.UserInfo;
 
-import com.capstone_ex.chat_server.Entity.UserInfoEntity;
-import com.capstone_ex.chat_server.Repository.UserInfoRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.capstone_ex.chat_server.DAO.User.UserInfoDAO;
+import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,16 +11,25 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserInfoServiceImpl implements UserInfoService {
 
-    private final UserInfoRepository userInfoRepository;
+    private final UserInfoDAO userInfoDAO;
 
     @Override
-    public UserInfoEntity getUserByEmail(String email) {
-        return userInfoRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("해당 이메일을 가진 사용자를 찾을 수 없습니다."));
+    public UserInfoEntity getUserById(String userId) {
+        return userInfoDAO.getUserById(userId);
     }
 
     @Override
     public List<UserInfoEntity> getAllUsers() {
-        return userInfoRepository.findAll();
+        return userInfoDAO.getAllUsers();
+    }
+
+    @Override
+    public UserInfoEntity saveUser(UserInfoEntity user) {
+        return userInfoDAO.saveUser(user);
+    }
+
+    @Override
+    public boolean existsById(String userId) {
+        return userInfoDAO.existsById(userId);
     }
 }

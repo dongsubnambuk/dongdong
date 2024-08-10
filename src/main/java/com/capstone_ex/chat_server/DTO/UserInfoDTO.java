@@ -1,15 +1,20 @@
 package com.capstone_ex.chat_server.DTO;
 
+import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import lombok.*;
 
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@ToString
 public class UserInfoDTO {
-    private Long userId;
-    private String email;
+    private String userId;
     private String nickname;
+    private String email;
+
+    public UserInfoDTO(UserInfoEntity userInfoEntity) {
+        this.userId = userInfoEntity.getUserId();
+        this.nickname = userInfoEntity.getNickname();
+        this.email = userInfoEntity.getEmail();
+    }
 }

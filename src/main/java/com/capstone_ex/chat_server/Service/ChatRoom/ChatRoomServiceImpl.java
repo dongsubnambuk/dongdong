@@ -1,13 +1,15 @@
-package com.capstone_ex.chat_server.Service;
+package com.capstone_ex.chat_server.Service.ChatRoom;
 
 import com.capstone_ex.chat_server.DAO.ChatRoom.ChatRoomDAO;
+import com.capstone_ex.chat_server.DAO.User.UserInfoDAO;
 import com.capstone_ex.chat_server.DTO.ChatRoom.ChatRoomDTO;
 import com.capstone_ex.chat_server.Entity.ChatRoom.ChatRoomEntity;
-import com.capstone_ex.chat_server.Entity.UserInfoEntity;
-import com.capstone_ex.chat_server.Service.ChatRoom.ChatRoomService;
+import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
+import com.capstone_ex.chat_server.Repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,56 +17,64 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChatRoomServiceImpl implements ChatRoomService {
 
+    private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomDAO chatRoomDAO;
+    private final UserInfoDAO userInfoDAO;
 
     @Override
-    public ChatRoomDTO createChatRoom(String chatName, String description, String createdBy) {
-        ChatRoomEntity chatRoomEntity = ChatRoomEntity.builder()
+    public ChatRoomEntity createChatRoom(String chatName, String description, String creatorId) {
+        UserInfoEntity creator = userInfoDAO.getUserById(creatorId);
+
+        if (creator == null) {
+            throw new IllegalArgumentException("Creator not found");
+        }
+
+        ChatRoomEntity chatRoom = ChatRoomEntity.builder()
                 .chatName(chatName)
                 .description(description)
+                .creator(creator)
+                .users(new HashSet<>())  // 이 부분을 추가하여 users를 초기화
                 .build();
-        ChatRoomEntity savedChatRoom = chatRoomDAO.saveChatRoom(chatRoomEntity);
-        return convertEntityToDTO(savedChatRoom);
+
+        chatRoom.getUsers().add(creator);
+
+        return chatRoomRepository.save(chatRoom);
     }
 
+
     @Override
-    public ChatRoomDTO getChatRoomById(Long chatRoomId) {
-        return chatRoomDAO.findChatRoomById(chatRoomId)
-                .map(this::convertEntityToDTO)
-                .orElseThrow(() -> new IllegalArgumentException("Chat room not found"));
+    public ChatRoomEntity getChatRoomById(Long chatRoomId) {
+        return chatRoomDAO.getChatRoomById(chatRoomId);
     }
 
     @Override
     public List<ChatRoomDTO> getAllChatRooms() {
-        return chatRoomDAO.findAllChatRooms().stream()
-                .map(this::convertEntityToDTO)
+        List<ChatRoomEntity> chatRoomEntities = chatRoomDAO.getAllChatRooms();
+        return chatRoomEntities.stream()
+                .map(ChatRoomDTO::new) // ChatRoomEntity를 ChatRoomDTO로 변환
                 .collect(Collectors.toList());
     }
 
     @Override
     public void deleteChatRoom(Long chatRoomId) {
-        chatRoomDAO.deleteChatRoomById(chatRoomId);
+        chatRoomDAO.deleteChatRoom(chatRoomId);
     }
 
     @Override
-    public void addUserToChatRoom(UserInfoEntity userInfoEntity, Long chatRoomId) {
-        ChatRoomEntity chatRoomEntity = chatRoomDAO.findChatRoomById(chatRoomId)
-                .orElseThrow(() -> new IllegalArgumentException("Chat room not found"));
-        chatRoomDAO.addUserToChatRoom(userInfoEntity, chatRoomEntity);
+    public void addUserToChatRoom(String userId, Long chatRoomId) {
+        UserInfoEntity user = userInfoDAO.getUserById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User ID is invalid or does not exist.");
+        }
+        chatRoomDAO.addUserToChatRoom(user, chatRoomId);
     }
 
     @Override
-    public void removeUserFromChatRoom(UserInfoEntity userInfoEntity, Long chatRoomId) {
-        ChatRoomEntity chatRoomEntity = chatRoomDAO.findChatRoomById(chatRoomId)
-                .orElseThrow(() -> new IllegalArgumentException("Chat room not found"));
-        chatRoomDAO.removeUserFromChatRoom(userInfoEntity, chatRoomEntity);
-    }
-
-    private ChatRoomDTO convertEntityToDTO(ChatRoomEntity chatRoomEntity) {
-        return ChatRoomDTO.builder()
-                .chatRoomId(chatRoomEntity.getId())
-                .chatName(chatRoomEntity.getChatName())
-                .description(chatRoomEntity.getDescription())
-                .build();
+    public void removeUserFromChatRoom(String userId, Long chatRoomId) {
+        UserInfoEntity user = userInfoDAO.getUserById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("User ID is invalid or does not exist.");
+        }
+        chatRoomDAO.removeUserFromChatRoom(user, chatRoomId);
     }
 }

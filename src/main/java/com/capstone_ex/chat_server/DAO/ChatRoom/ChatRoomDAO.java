@@ -1,19 +1,15 @@
 package com.capstone_ex.chat_server.DAO.ChatRoom;
 
 import com.capstone_ex.chat_server.Entity.ChatRoom.ChatRoomEntity;
-import com.capstone_ex.chat_server.Entity.UserInfoEntity;
-import org.springframework.stereotype.Repository;
+import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 
 import java.util.List;
-import java.util.Optional;
 
-@Repository
 public interface ChatRoomDAO {
-    ChatRoomEntity saveChatRoom(ChatRoomEntity chatRoomEntity);
-    Optional<ChatRoomEntity> findChatRoomById(Long chatRoomId);
-    List<ChatRoomEntity> findAllChatRooms();
-    void deleteChatRoomById(Long chatRoomId);
-    void addUserToChatRoom(UserInfoEntity userInfoEntity, ChatRoomEntity chatRoomEntity);
-    void removeUserFromChatRoom(UserInfoEntity userInfoEntity, ChatRoomEntity chatRoomEntity);
+    ChatRoomEntity createChatRoom(String chatName, String description, String creatorId);
+    ChatRoomEntity getChatRoomById(Long chatRoomId);
+    List<ChatRoomEntity> getAllChatRooms();
+    void deleteChatRoom(Long chatRoomId);
+    void addUserToChatRoom(UserInfoEntity user, Long chatRoomId);
+    void removeUserFromChatRoom(UserInfoEntity user, Long chatRoomId);
 }
-

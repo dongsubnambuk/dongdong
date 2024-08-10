@@ -24,7 +24,6 @@ public class SecurityConfig {
         http
                 .authorizeRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers("/ws/**").permitAll() // WebSocket 엔드포인트 접근 허용
                                 .requestMatchers("/**").permitAll()   // 모든 요청에 대해 접근 허용 (실제 배포 시에는 더 세분화된 권한 설정 필요)
                                 .anyRequest().authenticated()         // 나머지 요청은 인증된 사용자만 접근 가능
                 )

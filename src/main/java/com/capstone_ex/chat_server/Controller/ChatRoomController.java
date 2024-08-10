@@ -1,7 +1,8 @@
 package com.capstone_ex.chat_server.Controller;
 
 import com.capstone_ex.chat_server.DTO.ChatRoom.ChatRoomDTO;
-import com.capstone_ex.chat_server.Entity.UserInfoEntity;
+import com.capstone_ex.chat_server.Entity.ChatRoom.ChatRoomEntity;
+import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import com.capstone_ex.chat_server.Service.ChatRoom.ChatRoomService;
 import com.capstone_ex.chat_server.Service.UserInfo.UserInfoService;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chatroom")
@@ -20,15 +20,34 @@ public class ChatRoomController {
     private final UserInfoService userInfoService;
 
     @PostMapping
-    public ResponseEntity<ChatRoomDTO> createChatRoom(@RequestBody ChatRoomDTO chatRoomDTO) {
-        ChatRoomDTO createdChatRoom = chatRoomService.createChatRoom(chatRoomDTO.getChatName(), chatRoomDTO.getDescription(), null);
-        return ResponseEntity.ok(createdChatRoom);
+    public ResponseEntity<?> createChatRoom(@RequestBody ChatRoomDTO chatRoomDTO) {
+        // 유저가 이미 존재하는지 확인
+        UserInfoEntity creator = userInfoService.getUserById(chatRoomDTO.getCreatorInfo().getUserId());
+
+        if (creator == null) {
+            // 유저가 존재하지 않으면 새로 저장
+            creator = userInfoService.saveUser(
+                    UserInfoEntity.builder()
+                            .userId(chatRoomDTO.getCreatorInfo().getUserId())
+                            .nickname(chatRoomDTO.getCreatorInfo().getNickname())
+                            .email(chatRoomDTO.getCreatorInfo().getEmail())
+                            .build()
+            );
+        }
+
+        try {
+            // 채팅방 생성
+            ChatRoomEntity createdChatRoom = chatRoomService.createChatRoom(chatRoomDTO.getChatName(), chatRoomDTO.getDescription(), creator.getUserId());
+            return ResponseEntity.ok(new ChatRoomDTO(createdChatRoom));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(false);
+        }
     }
 
     @GetMapping("/{chatRoomId}")
     public ResponseEntity<ChatRoomDTO> getChatRoomById(@PathVariable Long chatRoomId) {
-        ChatRoomDTO chatRoomDTO = chatRoomService.getChatRoomById(chatRoomId);
-        return ResponseEntity.ok(chatRoomDTO);
+        ChatRoomEntity chatRoom = chatRoomService.getChatRoomById(chatRoomId);
+        return ResponseEntity.ok(new ChatRoomDTO(chatRoom));
     }
 
     @GetMapping
@@ -44,18 +63,22 @@ public class ChatRoomController {
     }
 
     @PostMapping("/{chatRoomId}/addUser")
-    public ResponseEntity<Void> addUserToChatRoom(@PathVariable Long chatRoomId, @RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        UserInfoEntity user = userInfoService.getUserByEmail(email);
-        chatRoomService.addUserToChatRoom(user, chatRoomId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> addUserToChatRoom(@PathVariable Long chatRoomId, @RequestBody String userId) {
+        try {
+            chatRoomService.addUserToChatRoom(userId, chatRoomId);
+            return ResponseEntity.ok(true);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(false);
+        }
     }
 
     @PostMapping("/{chatRoomId}/removeUser")
-    public ResponseEntity<Void> removeUserFromChatRoom(@PathVariable Long chatRoomId, @RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        UserInfoEntity user = userInfoService.getUserByEmail(email);
-        chatRoomService.removeUserFromChatRoom(user, chatRoomId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> removeUserFromChatRoom(@PathVariable Long chatRoomId, @RequestBody String userId) {
+        try {
+            chatRoomService.removeUserFromChatRoom(userId, chatRoomId);
+            return ResponseEntity.ok(true);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(false);
+        }
     }
 }

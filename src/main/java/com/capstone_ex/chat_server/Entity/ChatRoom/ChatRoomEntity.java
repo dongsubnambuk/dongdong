@@ -1,38 +1,46 @@
 package com.capstone_ex.chat_server.Entity.ChatRoom;
 
-import com.capstone_ex.chat_server.Entity.UserInfoEntity;
+import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "chatting_room")
-@Getter
-@Setter
+@Data
+@Table(name = "chat_room")
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
-@Builder
 public class ChatRoomEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column
-    private Long chatRoomId;
-    @Column
+
     private String chatName;
-    @Column
     private String description;
 
-    @ManyToMany // 유저랑 채팅방 다대다 연결
+    @ManyToOne
+    @JoinColumn(name = "creator_id")
+    private UserInfoEntity creator; // 채팅방 생성자
+
+    @ManyToMany
     @JoinTable(
-            name = "user_chat_room",
+            name = "chatroom_users",
             joinColumns = @JoinColumn(name = "chatroom_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<UserInfoEntity> users = new HashSet<>();
+    private Set<UserInfoEntity> users = new HashSet<>(); // users 필드를 초기화
 
-    @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true) // 메세지랑 채팅방 일대다 연결
-    private Set<MessageEntity> messages = new HashSet<>();
+    // 기존 필드와 메서드들...
+
+    // 새로운 메서드: 채팅방 생성자 ID를 반환
+    public String getCreatorId() {
+        return creator != null ? creator.getUserId() : null;
+    }
 }

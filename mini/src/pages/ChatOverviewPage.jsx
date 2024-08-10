@@ -3,18 +3,34 @@ import { useNavigate } from 'react-router-dom';
 
 const ChatOverviewPage = () => {
   const navigate = useNavigate();
-  const [chats, setChats] = useState([]);
+  const [chats, setChats] = useState([]); // 초기값을 빈 배열로 설정
+  const [createdChats, setCreatedChats] = useState([]); // 생성된 방 상태 관리
   const [users, setUsers] = useState([]);
   const [newChatName, setNewChatName] = useState('');
   const [newChatDescription, setNewChatDescription] = useState('');
-  const [activeTab, setActiveTab] = useState('chats'); // 탭 상태 관리
+  const [activeTab, setActiveTab] = useState('chats'); // 초기 탭 상태
+  const [isModalOpen, setIsModalOpen] = useState(false); // 모달 상태 관리
+
+  const email = localStorage.getItem("email");
+  const nickname = localStorage.getItem("nickname");
+  const userId = localStorage.getItem("UID");
 
   useEffect(() => {
     // 모든 채팅방 조회 API 호출
-    fetch('/api/chatroom/all')
+    fetch('http://chatex.p-e.kr:11000/api/chatroom/all')
       .then(response => response.json())
-      .then(data => setChats(data))
-      .catch(error => console.error('채팅방 목록을 불러오는 중 오류 발생:', error));
+      .then(data => {
+        if (Array.isArray(data)) {
+          setChats(data); // 데이터가 배열이면 설정
+        } else {
+          console.error('채팅방 목록의 형식이 올바르지 않습니다:', data);
+          setChats([]); // 데이터가 배열이 아니면 빈 배열로 설정
+        }
+      })
+      .catch(error => {
+        console.error('채팅방 목록을 불러오는 중 오류 발생:', error);
+        setChats([]); // 오류 발생 시 빈 배열로 설정
+      });
 
     // 사용자 목록 조회 API 호출
     fetch('http://chatex.p-e.kr:10000/api/users')
@@ -25,9 +41,9 @@ const ChatOverviewPage = () => {
 
   const handleCreateChat = () => {
     const loggedInUser = {
-      userId: '로그인된 유저의 해시코드',  // 실제 로그인된 유저 정보를 여기에 적용해야 합니다.
-      nickname: '로그인된 유저의 닉네임',
-      email: '로그인된 유저의 이메일'
+      userId: userId,  
+      nickname: nickname,
+      email: email
     };
 
     const newChat = {
@@ -46,8 +62,11 @@ const ChatOverviewPage = () => {
     .then(response => response.json())
     .then(data => {
       setChats(prevChats => [...prevChats, data]);
+      setCreatedChats(prevCreatedChats => [...prevCreatedChats, data]); // 생성된 방에 추가
       setNewChatName('');
       setNewChatDescription('');
+      setIsModalOpen(false);  // 모달 닫기
+      navigate(`/chat/${data.chatRoomId}`); // 생성된 방으로 이동
     })
     .catch(error => console.error('채팅방 생성 중 오류 발생:', error));
   };
@@ -62,9 +81,9 @@ const ChatOverviewPage = () => {
 
   const startChatWithUser = (user) => {
     const loggedInUser = {
-      userId: '로그인된 유저의 해시코드',  // 실제 로그인된 유저 정보를 여기에 적용해야 합니다.
-      nickname: '로그인된 유저의 닉네임',
-      email: '로그인된 유저의 이메일'
+      userId: userId,  
+      nickname: nickname,
+      email: email
     };
 
     const newChat = {
@@ -83,7 +102,8 @@ const ChatOverviewPage = () => {
     .then(response => response.json())
     .then(data => {
       setChats(prevChats => [...prevChats, data]);
-      navigate(`/chat/${data.id}`);
+      setCreatedChats(prevCreatedChats => [...prevCreatedChats, data]); // 생성된 방에 추가
+      navigate(`/chat/${data.chatRoomId}`); // 생성된 방으로 이동
     })
     .catch(error => console.error('채팅방 생성 중 오류 발생:', error));
   };
@@ -99,6 +119,12 @@ const ChatOverviewPage = () => {
           채팅방
         </button>
         <button 
+          style={activeTab === 'created' ? styles.activeTab : styles.tab} 
+          onClick={() => setActiveTab('created')}
+        >
+          생성 된 방
+        </button>
+        <button 
           style={activeTab === 'users' ? styles.activeTab : styles.tab} 
           onClick={() => setActiveTab('users')}
         >
@@ -106,11 +132,11 @@ const ChatOverviewPage = () => {
         </button>
       </div>
 
-      {activeTab === 'chats' ? (
+      {activeTab === 'created' ? (
         <>
           <ul style={styles.chatList}>
-            {chats.map((chat) => (
-              <li key={chat.id} style={styles.chatItem} onClick={() => openChat(chat.id)}>
+            {createdChats.map((chat, index) => (
+              <li key={`${chat.id}-${index}`} style={styles.chatItem} onClick={() => openChat(chat.id)}>
                 <div style={styles.chatInfo}>
                   <p style={styles.participants}>{chat.chatName}</p>
                   <p style={styles.lastMessage}>{chat.lastMessage}</p>
@@ -121,8 +147,26 @@ const ChatOverviewPage = () => {
               </li>
             ))}
           </ul>
-          <button onClick={() => setActiveTab('create')} style={styles.addButton}>+</button>
-          {activeTab === 'create' && (
+        </>
+      ) : activeTab === 'chats' ? (
+        <>
+          <ul style={styles.chatList}>
+            {chats.map((chat, index) => (
+              <li key={`${chat.id}-${index}`} style={styles.chatItem} onClick={() => openChat(chat.id)}>
+                <div style={styles.chatInfo}>
+                  <p style={styles.participants}>{chat.chatName}</p>
+                  <p style={styles.lastMessage}>{chat.lastMessage}</p>
+                </div>
+                {chat.unreadCount > 0 && (
+                  <div style={styles.unreadCount}>{chat.unreadCount}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>+</button>
+
+          {/* 모달 렌더링 부분 추가 */}
+          {isModalOpen && (
             <div style={styles.modalOverlay}>
               <div style={styles.modalContent}>
                 <input 
@@ -140,15 +184,15 @@ const ChatOverviewPage = () => {
                   style={styles.input}
                 />
                 <button onClick={handleCreateChat} style={styles.createButton}>채팅방 생성</button>
-                <button onClick={() => setActiveTab('chats')} style={styles.cancelButton}>취소</button>
+                <button onClick={() => setIsModalOpen(false)} style={styles.cancelButton}>취소</button>
               </div>
             </div>
           )}
         </>
-      ) : (
+      ) : activeTab === 'users' ? (
         <ul style={styles.userList}>
-          {users.map(user => (
-            <li key={user.userId} style={styles.userItem}>
+          {users.map((user, index) => (
+            <li key={`${user.userId}-${index}`} style={styles.userItem}>
               <p>{user.nickname}</p>
               <button style={styles.chatButton} onClick={() => startChatWithUser(user)}>
                 채팅하기
@@ -156,7 +200,7 @@ const ChatOverviewPage = () => {
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </div>
   );
 };
@@ -182,7 +226,10 @@ const styles = {
     flex: 1,
     padding: '10px',
     backgroundColor: '#ffffff',
-    border: '1px solid #ddd',
+    borderTop: '1px solid #ddd',
+    borderRight: '1px solid #ddd',
+    borderLeft: '1px solid #ddd',
+    borderBottom: '1px solid #ddd',
     borderRadius: '8px 8px 0 0',
     cursor: 'pointer',
     textAlign: 'center',
@@ -191,7 +238,9 @@ const styles = {
     flex: 1,
     padding: '10px',
     backgroundColor: '#61dafb',
-    border: '1px solid #ddd',
+    borderTop: '1px solid #ddd',
+    borderRight: '1px solid #ddd',
+    borderLeft: '1px solid #ddd',
     borderBottom: 'none',
     borderRadius: '8px 8px 0 0',
     cursor: 'pointer',
@@ -293,7 +342,6 @@ const styles = {
     backgroundColor: '#61dafb',
     border: 'none',
     cursor: 'pointer',
-    position: 'fixed',
     bottom: '20px',
     right: '20px',
     fontSize: '24px',
@@ -314,6 +362,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1000, // 모달이 다른 요소들 위에 나타나도록 설정
   },
   modalContent: {
     backgroundColor: 'white',
@@ -321,6 +370,7 @@ const styles = {
     borderRadius: '8px',
     display: 'flex',
     flexDirection: 'column',
+    zIndex: 1001, // 모달 콘텐츠가 항상 위에 표시되도록 설정
   },
 };
 

@@ -9,13 +9,15 @@ const ChatPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const messageEndRef = useRef(null);
   const stompClient = useRef(null);
+  const nickname = localStorage.getItem('nickname');
+
   const loggedInUser = {
-    nickname: '로그인된 유저의 닉네임' // 실제 로그인된 유저의 닉네임을 가져와야 합니다.
+    nickname: nickname 
   };
 
   useEffect(() => {
     // WebSocket 연결 설정
-    const socket = new SockJS('http://chatex.p-e.kr:11000/ws');
+    const socket = new SockJS('http://chatex.p-e.kr:11000/ws/chat');
     stompClient.current = Stomp.over(socket);
 
     stompClient.current.connect({}, () => {

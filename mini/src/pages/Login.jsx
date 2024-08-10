@@ -43,6 +43,7 @@ function Login() {
                 localStorage.setItem("token", result.token);
                 localStorage.setItem("email", result.user.email);
                 localStorage.setItem("nickname", result.user.nickname);
+                localStorage.setItem("UID", result.user.uniqueId);
                 console.log("로그인 성공");
                 navigate('/'); 
             } else {

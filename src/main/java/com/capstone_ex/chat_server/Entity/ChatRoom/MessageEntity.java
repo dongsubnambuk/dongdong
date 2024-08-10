@@ -17,11 +17,14 @@ public class MessageEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long messageId;
-    private String userId;
-    private String content;
-    private LocalDateTime sendTime;
+
+    @Column(nullable = false)
     private boolean check;
+
+    private String content;
+    private Long messageId;
+    private LocalDateTime sendTime;
+    private String userId;
 
     @ManyToOne
     @JoinColumn(name = "chatroom_id")

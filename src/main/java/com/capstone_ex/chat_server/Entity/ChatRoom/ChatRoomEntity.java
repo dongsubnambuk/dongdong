@@ -12,7 +12,10 @@ import java.util.Set;
 
 @Entity
 @Data
-@Table(name = "chat_room")
+@Table(name = "chat_room", indexes = {
+        @Index(name = "idx_chat_name", columnList = "chatName"),
+        @Index(name = "idx_creator_id", columnList = "creator_id")
+})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

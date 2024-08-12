@@ -21,7 +21,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api")
+@RequestMapping("/api/auth")
 @CrossOrigin(origins = {"http://localhost:3000", "http://192.168.0.6:3000"})
 public class UserController {
 
@@ -58,7 +58,7 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @GetMapping
+    @GetMapping("/check")
     public ResponseEntity<String> apiRoot() {
         return ResponseEntity.ok("success");
     }
@@ -75,7 +75,7 @@ public class UserController {
         return ResponseEntity.ok(nicknamesWithIds);
     }
 
-    @GetMapping("/user/id/{uniqueId}")
+    @GetMapping("/uid/{uniqueId}")
     public ResponseEntity<?> getUserByUniqueId(@PathVariable String uniqueId) {
         UserEntity user = userService.getUserByUniqueId(uniqueId);
         if (user == null) {

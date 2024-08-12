@@ -32,7 +32,7 @@ public class CommunicationServiceImpl implements CommunicationService{
             throw new IllegalStateException("No LOGIN-SERVER instances available");
         }
         ServiceInstance loginService = instances.get(0);
-        URI uri = URI.create(loginService.getUri() + "/api/user/id/" + uniqueId);
+        URI uri = URI.create(loginService.getUri() + "/api/auth/uid/" + uniqueId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(headers);

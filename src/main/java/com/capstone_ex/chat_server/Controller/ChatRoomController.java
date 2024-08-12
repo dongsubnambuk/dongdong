@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/chatroom")
+@RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatRoomController {
 
@@ -25,7 +25,7 @@ public class ChatRoomController {
     private final CommunicationService communicationService;
     private final ChatRoomDAO chatRoomDAO;
 
-    @PostMapping
+    @PostMapping("/create-chat")
     public ResponseEntity<?> createChatRoom(@RequestBody ChatRoomDTO chatRoomDTO) {
         List<ExternalUserInfoDTO> externalUserInfoDTOList = new ArrayList<>();
         externalUserInfoDTOList.add(communicationService.getUserInfo(chatRoomDTO.getCreatorId()));
@@ -60,7 +60,7 @@ public class ChatRoomController {
         return ResponseEntity.ok(new ChatRoomDTO(chatRoom));
     }
 
-    @GetMapping
+    @GetMapping("/all-chat")
     public ResponseEntity<List<ChatRoomDTO>> getAllChatRooms() {
         List<ChatRoomDTO> chatRooms = chatRoomService.getAllChatRooms();
         return ResponseEntity.ok(chatRooms);
@@ -72,7 +72,7 @@ public class ChatRoomController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{chatRoomId}/addUser")
+    @PostMapping("/{chatRoomId}/add-user")
     public ResponseEntity<?> addUserToChatRoom(@PathVariable Long chatRoomId, @RequestBody String userId) {
         try {
             chatRoomService.addUserToChatRoom(userId, chatRoomId);
@@ -82,7 +82,7 @@ public class ChatRoomController {
         }
     }
 
-    @PostMapping("/{chatRoomId}/removeUser")
+    @PostMapping("/{chatRoomId}/remove-user")
     public ResponseEntity<?> removeUserFromChatRoom(@PathVariable Long chatRoomId, @RequestBody String userId) {
         try {
             chatRoomService.removeUserFromChatRoom(userId, chatRoomId);
@@ -90,5 +90,10 @@ public class ChatRoomController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.ok(false);
         }
+    }
+
+    @GetMapping("/check")
+    public ResponseEntity<String> apiRoot() {
+        return ResponseEntity.ok("success");
     }
 }

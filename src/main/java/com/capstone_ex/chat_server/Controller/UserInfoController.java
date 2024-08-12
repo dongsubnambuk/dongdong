@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/chat/user")
 @RequiredArgsConstructor
 public class UserInfoController {
 
@@ -21,7 +21,7 @@ public class UserInfoController {
         return ResponseEntity.ok(user);
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<UserInfoEntity>> getAllUsers() {
         List<UserInfoEntity> users = userInfoService.getAllUsers();
         return ResponseEntity.ok(users);

@@ -15,9 +15,9 @@ public class UserInfoController {
 
     private final UserInfoService userInfoService;
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<UserInfoEntity> getUserById(@PathVariable String userId) {
-        UserInfoEntity user = userInfoService.getUserById(userId);
+    @GetMapping("/{uniqueId}")
+    public ResponseEntity<UserInfoEntity> getUserByUniqueId(@PathVariable String uniqueId) {
+        UserInfoEntity user = userInfoService.getUserByUniqueId(uniqueId);
         return ResponseEntity.ok(user);
     }
 

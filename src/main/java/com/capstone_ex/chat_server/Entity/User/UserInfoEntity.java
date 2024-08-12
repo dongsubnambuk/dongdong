@@ -10,7 +10,7 @@ import java.util.*;
 
 @Entity
 @Table(name = "user_info", indexes = {
-        @Index(name = "idx_user_id", columnList = "userId", unique = true)
+        @Index(name = "idx_user_id", columnList = "unique_id", unique = true)
 })
 @Getter
 @Setter
@@ -23,12 +23,11 @@ public class UserInfoEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String userId;
-    private String email;
+    @Column
     private String nickname;
 
-    @ManyToMany(mappedBy = "users")
-    @JsonManagedReference // 이 필드는 직렬화에 포함
-    private Set<ChatRoomEntity> chatRooms = new HashSet<>();
+    @Column(name = "unique_id")
+    private String uniqueId;
 
 }
+

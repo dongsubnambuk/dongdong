@@ -12,7 +12,7 @@ import java.util.Set;
 @Entity
 @Table(name = "message", indexes = {
         @Index(name = "idx_chatroom_id", columnList = "chatroom_id"),
-        @Index(name = "idx_user_id", columnList = "user_id"),
+        @Index(name = "idx_user_unique_id", columnList = "unique_id"),
         @Index(name = "idx_send_time", columnList = "sendTime")
 })
 @Getter
@@ -41,7 +41,7 @@ public class MessageEntity {
     private ChatRoomEntity chatRoom;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "unique_id")
     private UserInfoEntity user;
 
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)

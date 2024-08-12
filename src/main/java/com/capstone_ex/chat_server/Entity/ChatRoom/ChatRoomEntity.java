@@ -1,6 +1,7 @@
 package com.capstone_ex.chat_server.Entity.ChatRoom;
 
 import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,24 +27,16 @@ public class ChatRoomEntity {
     private Long id;
 
     private String chatName;
-    private String description;
 
-    @ManyToOne
-    @JoinColumn(name = "creator_id")
-    private UserInfoEntity creator; // 채팅방 생성자
+    @Column(name = "creator_id", nullable = false)
+    private String creatorId; // 채팅방 생성자의 ID만 저장
 
     @ManyToMany
     @JoinTable(
             name = "chatroom_users",
             joinColumns = @JoinColumn(name = "chatroom_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
+            inverseJoinColumns = @JoinColumn(name = "unique_id")
     )
     private Set<UserInfoEntity> users = new HashSet<>(); // users 필드를 초기화
 
-    // 기존 필드와 메서드들...
-
-    // 새로운 메서드: 채팅방 생성자 ID를 반환
-    public String getCreatorId() {
-        return creator != null ? creator.getUserId() : null;
-    }
 }

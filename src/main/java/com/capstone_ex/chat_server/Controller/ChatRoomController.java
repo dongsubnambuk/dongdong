@@ -1,14 +1,18 @@
 package com.capstone_ex.chat_server.Controller;
 
+import com.capstone_ex.chat_server.DAO.ChatRoom.ChatRoomDAO;
 import com.capstone_ex.chat_server.DTO.ChatRoom.ChatRoomDTO;
+import com.capstone_ex.chat_server.DTO.ExternalDTO.ExternalUserInfoDTO;
 import com.capstone_ex.chat_server.Entity.ChatRoom.ChatRoomEntity;
 import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import com.capstone_ex.chat_server.Service.ChatRoom.ChatRoomService;
+import com.capstone_ex.chat_server.Service.Communication.CommunicationService;
 import com.capstone_ex.chat_server.Service.UserInfo.UserInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -18,27 +22,33 @@ public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
     private final UserInfoService userInfoService;
+    private final CommunicationService communicationService;
+    private final ChatRoomDAO chatRoomDAO;
 
     @PostMapping
     public ResponseEntity<?> createChatRoom(@RequestBody ChatRoomDTO chatRoomDTO) {
-        // 유저가 이미 존재하는지 확인
-        UserInfoEntity creator = userInfoService.getUserById(chatRoomDTO.getCreatorInfo().getUserId());
+        List<ExternalUserInfoDTO> externalUserInfoDTOList = new ArrayList<>();
+        externalUserInfoDTOList.add(communicationService.getUserInfo(chatRoomDTO.getCreatorId()));
+        externalUserInfoDTOList.add(communicationService.getUserInfo(chatRoomDTO.getSelectedId()));
 
-        if (creator == null) {
+        for (ExternalUserInfoDTO externalUserInfoDTO : externalUserInfoDTOList) {
+            // 유저가 이미 존재하는지 확인
+            UserInfoEntity user = userInfoService.getUserByUniqueId(externalUserInfoDTO.getUniqueId());
+
             // 유저가 존재하지 않으면 새로 저장
-            creator = userInfoService.saveUser(
-                    UserInfoEntity.builder()
-                            .userId(chatRoomDTO.getCreatorInfo().getUserId())
-                            .nickname(chatRoomDTO.getCreatorInfo().getNickname())
-                            .email(chatRoomDTO.getCreatorInfo().getEmail())
-                            .build()
-            );
+            if (user == null) {
+                userInfoService.saveNewUser(externalUserInfoDTO);
+            }
         }
 
         try {
             // 채팅방 생성
-            ChatRoomEntity createdChatRoom = chatRoomService.createChatRoom(chatRoomDTO.getChatName(), chatRoomDTO.getDescription(), creator.getUserId());
-            return ResponseEntity.ok(new ChatRoomDTO(createdChatRoom));
+            ChatRoomEntity createdChatRoom = chatRoomService.createChatRoom(chatRoomDTO.getChatName(), externalUserInfoDTOList.get(0).getUniqueId());
+
+            // 선택된 유저도 채팅방에 추가
+            chatRoomService.addUserToChatRoom(externalUserInfoDTOList.get(1).getUniqueId(), createdChatRoom.getId());
+
+            return ResponseEntity.ok(createdChatRoom);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.ok(false);
         }

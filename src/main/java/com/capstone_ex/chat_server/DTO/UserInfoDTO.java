@@ -8,13 +8,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserInfoDTO {
-    private String userId;
     private String nickname;
-    private String email;
+    private String uniqueId;
 
     public UserInfoDTO(UserInfoEntity userInfoEntity) {
-        this.userId = userInfoEntity.getUserId();
         this.nickname = userInfoEntity.getNickname();
-        this.email = userInfoEntity.getEmail();
+        this.uniqueId = userInfoEntity.getUniqueId();
     }
 }

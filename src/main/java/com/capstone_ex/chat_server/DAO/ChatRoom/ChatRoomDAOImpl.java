@@ -1,9 +1,11 @@
 package com.capstone_ex.chat_server.DAO.ChatRoom;
 
+import com.capstone_ex.chat_server.DTO.ExternalDTO.ExternalUserInfoDTO;
 import com.capstone_ex.chat_server.Entity.ChatRoom.ChatRoomEntity;
 import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import com.capstone_ex.chat_server.Repository.ChatRoomRepository;
 import com.capstone_ex.chat_server.Repository.UserInfoRepository;
+import com.capstone_ex.chat_server.Service.UserInfo.UserInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -17,16 +19,13 @@ public class ChatRoomDAOImpl implements ChatRoomDAO {
 
     private final ChatRoomRepository chatRoomRepository;
     private final UserInfoRepository userInfoRepository;
+    private final UserInfoService userInfoService;
 
     @Override
-    public ChatRoomEntity createChatRoom(String chatName, String description, String creatorId) {
-        UserInfoEntity creator = userInfoRepository.findByUserId(creatorId)
-                .orElseThrow(() -> new IllegalArgumentException("Creator ID is invalid or does not exist."));
-
+    public ChatRoomEntity createChatRoom(String chatName, String creatorId) {
         ChatRoomEntity chatRoom = ChatRoomEntity.builder()
                 .chatName(chatName)
-                .description(description)
-                .creator(creator)  // creator를 설정
+                .creatorId(creatorId)  // creatorId를 String으로 설정
                 .users(new HashSet<>()) // 초기 users 설정
                 .build();
 
@@ -50,15 +49,15 @@ public class ChatRoomDAOImpl implements ChatRoomDAO {
     }
 
     @Override
-    public void addUserToChatRoom(UserInfoEntity user, Long chatRoomId) {
-        ChatRoomEntity chatRoom = getChatRoomById(chatRoomId);
-        if (chatRoom != null) {
-            chatRoom.getUsers().add(user);
-            chatRoomRepository.save(chatRoom);
+    public void addUserToChatRoom(String uniqueId, Long chatRoomId) {
+        ChatRoomEntity chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new IllegalArgumentException("Chat Room ID is invalid or does not exist."));
 
-            // user_chat_room 테이블에 사용자와 채팅방 ID를 저장
-            // 이 부분이 사용자와 채팅방 간의 관계를 저장하는 로직이 됩니다.
-        }
+        UserInfoEntity user = userInfoRepository.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new IllegalArgumentException("User ID is invalid or does not exist."));
+
+        chatRoom.getUsers().add(user);
+        chatRoomRepository.save(chatRoom);
     }
 
     @Override

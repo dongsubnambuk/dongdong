@@ -7,7 +7,7 @@ import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import java.util.List;
 
 public interface ChatRoomService {
-    ChatRoomEntity createChatRoom(String chatName, String description, String creatorId);
+    ChatRoomEntity createChatRoom(String chatName, String creatorId);
 
     ChatRoomEntity getChatRoomById(Long chatRoomId);
 

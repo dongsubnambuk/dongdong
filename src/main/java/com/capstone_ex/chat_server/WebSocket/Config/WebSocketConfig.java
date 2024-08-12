@@ -21,5 +21,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new ChatWebSocketHandler(objectMapper), "/ws/chat")
                 .setAllowedOrigins("http://192.168.0.6:3000", "http://localhost:3000"); // 허용할 프론트엔드 URL
+                //.setAllowedOrigins("*"); // 허용할 프론트엔드 URL
+
     }
 }

@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_message", indexes = {
-        @Index(name = "idx_user_id", columnList = "user_id"),
+        @Index(name = "idx_user_unique_id", columnList = "unique_id"),
         @Index(name = "idx_message_id", columnList = "message_id"),
         @Index(name = "idx_is_read", columnList = "isRead")
 })
@@ -25,7 +25,7 @@ public class UserMessageEntity {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "unique_id")
     private UserInfoEntity user;
 
     @ManyToOne

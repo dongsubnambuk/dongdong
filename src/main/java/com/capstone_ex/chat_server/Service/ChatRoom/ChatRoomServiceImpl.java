@@ -22,7 +22,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final UserInfoDAO userInfoDAO;
 
     @Override
-    public ChatRoomEntity createChatRoom(String chatName, String description, String creatorId) {
+    public ChatRoomEntity createChatRoom(String chatName, String creatorId) {
         UserInfoEntity creator = userInfoDAO.getUserById(creatorId);
 
         if (creator == null) {
@@ -31,16 +31,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         ChatRoomEntity chatRoom = ChatRoomEntity.builder()
                 .chatName(chatName)
-                .description(description)
-                .creator(creator)
-                .users(new HashSet<>())  // 이 부분을 추가하여 users를 초기화
+                .creatorId(creator.getUniqueId())  // creatorId를 String으로 설정
+                .users(new HashSet<>())  // users를 초기화
                 .build();
 
         chatRoom.getUsers().add(creator);
 
         return chatRoomRepository.save(chatRoom);
     }
-
 
     @Override
     public ChatRoomEntity getChatRoomById(Long chatRoomId) {
@@ -50,10 +48,14 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     @Override
     public List<ChatRoomDTO> getAllChatRooms() {
         List<ChatRoomEntity> chatRoomEntities = chatRoomDAO.getAllChatRooms();
+        if(chatRoomEntities.isEmpty()) {
+            System.out.println("No chat rooms found"); // 로그를 찍어서 확인
+        }
         return chatRoomEntities.stream()
-                .map(ChatRoomDTO::new) // ChatRoomEntity를 ChatRoomDTO로 변환
+                .map(ChatRoomDTO::new)
                 .collect(Collectors.toList());
     }
+
 
     @Override
     public void deleteChatRoom(Long chatRoomId) {
@@ -66,7 +68,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         if (user == null) {
             throw new IllegalArgumentException("User ID is invalid or does not exist.");
         }
-        chatRoomDAO.addUserToChatRoom(user, chatRoomId);
+        chatRoomDAO.addUserToChatRoom(user.getUniqueId(), chatRoomId);
     }
 
     @Override

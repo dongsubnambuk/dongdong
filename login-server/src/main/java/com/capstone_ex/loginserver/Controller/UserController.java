@@ -1,10 +1,12 @@
 package com.capstone_ex.loginserver.Controller;
 
+import com.capstone_ex.loginserver.DTO.Info.UserInfoDTO;
 import com.capstone_ex.loginserver.Entity.UserEntity;
 import com.capstone_ex.loginserver.Service.UserService;
 import com.capstone_ex.loginserver.Service.CustomUserDetailsService;
 import com.capstone_ex.loginserver.Security.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,6 +14,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,9 +75,15 @@ public class UserController {
         return ResponseEntity.ok(nicknamesWithIds);
     }
 
-    @GetMapping("/user/id")
-    public ResponseEntity<?> getUserByUniqueId(@RequestParam String uniqueId) {
+    @GetMapping("/user/id/{uniqueId}")
+    public ResponseEntity<?> getUserByUniqueId(@PathVariable String uniqueId) {
         UserEntity user = userService.getUserByUniqueId(uniqueId);
-        return ResponseEntity.ok(user);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        }
+        UserInfoDTO userInfo = new UserInfoDTO();
+        userInfo.setNickname(user.getNickname());
+        userInfo.setUniqueId(user.getUniqueId());
+        return ResponseEntity.ok(userInfo);
     }
 }

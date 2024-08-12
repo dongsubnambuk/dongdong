@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // 모든 OPTIONS 요청 허용
-                                .requestMatchers("/api/login", "/api/register", "/api/user", "/api", "/api/users", "/api/nicknames", "/api/user/id").permitAll() // 로그인과 회원가입 경로는 인증 없이 접근 허용
+                                .requestMatchers("/api/login", "/api/register", "/api/user", "/api", "/api/users", "/api/nicknames", "/api/user/id/{uniqueId}").permitAll() // 로그인과 회원가입 경로는 인증 없이 접근 허용
                                 .requestMatchers("/api/**").authenticated() // 그 외의 /api/** 경로는 인증 필요
                                 .anyRequest().authenticated()
                 )
@@ -61,6 +61,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://192.168.0.6:3000", "http://localhost:3000"));
+        //configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
         configuration.addAllowedMethod("*"); // 모든 HTTP 메서드 허용
         configuration.addAllowedHeader("*"); // 모든 헤더 허용
         configuration.setAllowCredentials(true);

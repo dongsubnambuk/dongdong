@@ -6,9 +6,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/receiver")
+@RequestMapping("/api/message/receiver")
 public class ReceiveController {
-    @GetMapping
+    @GetMapping("/check")
     public ResponseEntity<?> checkConnection(){
         return ResponseEntity.ok("Success");
     }

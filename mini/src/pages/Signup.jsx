@@ -29,7 +29,7 @@ function Signup(){
     const handleSignup = async (event) => {
         event.preventDefault();
 
-        const response = await fetch('http://chatex.p-e.kr:10000/api/register', { 
+        const response = await fetch('http://chatex.p-e.kr/api/register', { 
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

@@ -6,24 +6,28 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ChatOverviewPage from './pages/ChatOverviewPage';
 import ChatPage from './pages/ChatPage';
+import UserListPage from './pages/UserListPage';
+import UserProfilePage from './pages/UserProfilePage';
+import ChatRoomManagementPage from './pages/ChatRoomManagementPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
     <div className="mobile-container">
-
-<Router>
-      <Routes>
-        <Route path="/" element={<MainPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/chat" element={<ChatOverviewPage />} />
-        <Route path="/chat/:id" element={<ChatPage />} />
-      </Routes>
-    </Router>
-
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/chat" element={<ChatOverviewPage />} />
+          <Route path="/chat/:id" element={<ChatPage />} />
+          <Route path="/users" element={<UserListPage />} />
+          <Route path="/user/:id" element={<UserProfilePage />} />
+          <Route path="/chat/:id/manage" element={<ChatRoomManagementPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Router>
     </div>
-    
-
   );
 }
 

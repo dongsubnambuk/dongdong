@@ -4,7 +4,7 @@ import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
 
 const ChatPage = () => {
-  const { id } = useParams(); // 채팅방 ID
+  const { id } = useParams();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const messageEndRef = useRef(null);
@@ -78,18 +78,19 @@ const ChatPage = () => {
         <div ref={messageEndRef} />
       </div>
       <div style={styles.inputContainer}>
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          style={styles.input}
-          placeholder="메시지 입력..."
-        />
-        <button onClick={handleSendMessage} style={styles.sendButton}>
-          전송
-        </button>
-      </div>
+      // (이전 코드 계속)
+      <input
+        type="text"
+        value={newMessage}
+        onChange={(e) => setNewMessage(e.target.value)}
+        style={styles.input}
+        placeholder="메시지 입력..."
+      />
+      <button onClick={handleSendMessage} style={styles.sendButton}>
+        전송
+      </button>
     </div>
+  </div>
   );
 };
 
@@ -137,3 +138,4 @@ const styles = {
 };
 
 export default ChatPage;
+

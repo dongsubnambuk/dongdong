@@ -32,15 +32,14 @@ public class SecurityConfig {
         return http.build();
     }
 
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        //configuration.setAllowedOriginPatterns(Collections.singletonList("*")); // 모든 도메인 허용
         configuration.setAllowedOrigins(Arrays.asList("http://192.168.0.6:3000", "http://localhost:3000")); // 프론트엔드 주소
-        //configuration.setAllowedOrigins(Collections.singletonList("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // 허용된 HTTP 메소드
+        configuration.setAllowedHeaders(Arrays.asList("*")); // 허용된 헤더
+        configuration.setAllowCredentials(true); // 자격 증명을 포함한 요청 허용
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

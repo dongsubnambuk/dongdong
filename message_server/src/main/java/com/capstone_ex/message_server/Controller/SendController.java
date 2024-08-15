@@ -7,10 +7,7 @@ import com.capstone_ex.message_server.Repository.UserRepository;
 import com.capstone_ex.message_server.WebSocket.Controller.MessageWebSocketController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -19,6 +16,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/message/sender")
+@CrossOrigin(origins = {"http://localhost:3000", "http://192.168.0.6:3000"})
 public class SendController {
     private final MessageWebSocketController messageWebSocketController;
     private final UserRepository userRepository;

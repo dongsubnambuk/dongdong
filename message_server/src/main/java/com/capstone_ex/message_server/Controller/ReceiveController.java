@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/message/receiver")
+@CrossOrigin(origins = {"http://localhost:3000", "http://192.168.0.6:3000"})
 public class ReceiveController {
     private final ReceiveService receiveService;
     private final SendController sendController;

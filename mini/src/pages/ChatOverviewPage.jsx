@@ -1,377 +1,276 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const ChatOverviewPage = () => {
-  const navigate = useNavigate();
-  const [chats, setChats] = useState([]); // 초기값을 빈 배열로 설정
-  const [createdChats, setCreatedChats] = useState([]); // 생성된 방 상태 관리
+  const [rooms, setRooms] = useState([]);
   const [users, setUsers] = useState([]);
-  const [newChatName, setNewChatName] = useState('');
-  const [newChatDescription, setNewChatDescription] = useState('');
-  const [activeTab, setActiveTab] = useState('chats'); // 초기 탭 상태
-  const [isModalOpen, setIsModalOpen] = useState(false); // 모달 상태 관리
+  const navigate = useNavigate();
+  const creatorId = localStorage.getItem('UID');
+  const [draggingRoomId, setDraggingRoomId] = useState(null);
+  const [startX, setStartX] = useState(null);
+  const [currentX, setCurrentX] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [wsInstance, setWsInstance] = useState(null);
+  const [attemptCount, setAttemptCount] = useState(0);
 
-  const email = localStorage.getItem("email");
-  const nickname = localStorage.getItem("nickname");
-  const userId = localStorage.getItem("UID");
+  const maxAttempts = 5;
 
   useEffect(() => {
-    // 모든 채팅방 조회 API 호출
-    fetch('http://chatex.p-e.kr:11000/api/chatroom/all')
-      .then(response => response.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setChats(data); // 데이터가 배열이면 설정
-        } else {
-          console.error('채팅방 목록의 형식이 올바르지 않습니다:', data);
-          setChats([]); // 데이터가 배열이 아니면 빈 배열로 설정
-        }
+    fetchRooms();
+    fetchUsers();
+    connectWebSocket();
+
+    return () => {
+      if (wsInstance) {
+        wsInstance.close();
+      }
+    };
+  }, [attemptCount]);
+
+  const connectWebSocket = () => {
+    const ws = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}`);
+
+    ws.onopen = () => {
+      console.log('WebSocket 연결 성공');
+      setWsInstance(ws);
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket 오류:', error);
+      if (attemptCount < maxAttempts) {
+        setTimeout(() => setAttemptCount(attemptCount + 1), 1000); // 1초 후 재시도
+      }
+    };
+
+    ws.onmessage = (event) => {
+      const newMessage = JSON.parse(event.data);
+      console.log('새 메시지 수신:', newMessage);
+      updateChatRoom(newMessage);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket 연결이 종료되었습니다.');
+      if (attemptCount < maxAttempts) {
+        setTimeout(() => setAttemptCount(attemptCount + 1), 1000); // 1초 후 재시도
+      }
+    };
+  };
+
+  const fetchRooms = () => {
+    axios.get('http://chatex.p-e.kr/api/chat/all-chat')
+      .then(response => {
+        const roomsData = response.data.map(room => ({
+          id: room.chatRoomId,
+          chatName: room.chatName,
+          creatorId: room.creatorId,
+          lastMessage: room.lastMessage, 
+          lastMessageSender: room.lastMessageSender, 
+          unreadCount: room.unreadCount || 0,  // unreadCount 초기값 설정
+        }));
+
+        setRooms(roomsData);
       })
       .catch(error => {
-        console.error('채팅방 목록을 불러오는 중 오류 발생:', error);
-        setChats([]); // 오류 발생 시 빈 배열로 설정
+        console.error('채팅방 목록을 가져오는데 실패했습니다.', error);
       });
-
-    // 사용자 목록 조회 API 호출
-    fetch('http://chatex.p-e.kr:10000/api/users')
-      .then(response => response.json())
-      .then(data => setUsers(data))
-      .catch(error => console.error('사용자 목록을 불러오는 중 오류 발생:', error));
-  }, []);
-
-  const handleCreateChat = () => {
-    const loggedInUser = {
-      userId: userId,  
-      nickname: nickname,
-      email: email
-    };
-
-    const newChat = {
-      chatName: newChatName,
-      description: newChatDescription,
-      creatorInfo: loggedInUser
-    };
-
-    fetch('http://chatex.p-e.kr:11000/api/chatroom', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(newChat)
-    })
-    .then(response => response.json())
-    .then(data => {
-      setChats(prevChats => [...prevChats, data]);
-      setCreatedChats(prevCreatedChats => [...prevCreatedChats, data]); // 생성된 방에 추가
-      setNewChatName('');
-      setNewChatDescription('');
-      setIsModalOpen(false);  // 모달 닫기
-      navigate(`/chat/${data.chatRoomId}`); // 생성된 방으로 이동
-    })
-    .catch(error => console.error('채팅방 생성 중 오류 발생:', error));
   };
 
-  const openChat = (chatId) => {
-    // 채팅방을 열면 unreadCount를 0으로 초기화
-    setChats(prevChats => prevChats.map(chat => 
-      chat.id === chatId ? { ...chat, unreadCount: 0 } : chat
-    ));
-    navigate(`/chat/${chatId}`);
+  const fetchUsers = () => {
+    axios.get('http://chatex.p-e.kr/api/chat/user/all')
+      .then(response => {
+        setUsers(response.data);
+      })
+      .catch(error => {
+        console.error('유저 목록을 가져오는데 실패했습니다.', error);
+      });
   };
 
-  const startChatWithUser = (user) => {
-    const loggedInUser = {
-      userId: userId,  
-      nickname: nickname,
-      email: email
-    };
+  const updateChatRoom = (newMessage) => {
+    setRooms((prevRooms) => {
+      return prevRooms.map((room) => {
+        if (room.id === newMessage.roomId) {
+          const isCurrentUser = newMessage.userId === creatorId;
+          return {
+            ...room,
+            lastMessage: newMessage.messageContent,
+            lastMessageSender: isCurrentUser ? '나' : '상대방',
+            unreadCount: isCurrentUser ? room.unreadCount : room.unreadCount + 1,
+          };
+        }
+        return room;
+      });
+    });
+  };
 
-    const newChat = {
-      chatName: `${loggedInUser.nickname} & ${user.nickname}`,
-      description: `Chat between ${loggedInUser.nickname} and ${user.nickname}`,
-      creatorInfo: loggedInUser
-    };
+  const createChatRoom = (selectedUserUniqueId, selectedUserNickname) => {
+    axios.post('http://chatex.p-e.kr/api/chat/create-chat', {
+        chatName: selectedUserNickname,
+        creatorId: creatorId,
+        selectedId: selectedUserUniqueId
+      })
+      .then(response => {
+        const newRoom = {
+          id: response.data.chatRoomId,
+          chatName: selectedUserNickname,
+          lastMessage: '',
+          lastMessageSender: '',
+          unreadCount: 0
+        };
+        setRooms(prevRooms => [...prevRooms, newRoom]);
+        navigate(`/chat/${newRoom.id}`);
+        fetchRooms();
+      })
+      .catch(error => {
+        console.error('채팅방 생성에 실패했습니다.', error);
+      });
+  };
 
-    fetch('http://chatex.p-e.kr:11000/api/chatroom', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(newChat)
-    })
-    .then(response => response.json())
-    .then(data => {
-      setChats(prevChats => [...prevChats, data]);
-      setCreatedChats(prevCreatedChats => [...prevCreatedChats, data]); // 생성된 방에 추가
-      navigate(`/chat/${data.chatRoomId}`); // 생성된 방으로 이동
-    })
-    .catch(error => console.error('채팅방 생성 중 오류 발생:', error));
+  const handleTouchStart = (e, roomId) => {
+    setStartX(e.touches[0].clientX);
+    setDraggingRoomId(roomId);
+    setIsDragging(false);
+  };
+
+  const handleTouchMove = (e) => {
+    if (startX !== null) {
+      setCurrentX(e.touches[0].clientX);
+      if (Math.abs(startX - e.touches[0].clientX) > 10) {
+        setIsDragging(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      if (currentX - startX < -50) {
+        setCurrentX(startX - 70);
+      } else {
+        setCurrentX(startX);
+      }
+    }
+    setStartX(null);
+    setDraggingRoomId(null);
+  };
+
+  const handleDelete = (roomId) => {
+    axios.delete(`http://chatex.p-e.kr/api/chat/${roomId}`)
+      .then(() => fetchRooms())
+      .catch((error) => {
+        console.error('Failed to delete chat room:', error.response ? error.response.data : error.message);
+        alert('Failed to delete chat room. Please try again later.');
+      });
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.header}>채팅</h2>
-      <div style={styles.tabContainer}>
-        <button 
-          style={activeTab === 'chats' ? styles.activeTab : styles.tab} 
-          onClick={() => setActiveTab('chats')}
-        >
-          채팅방
-        </button>
-        <button 
-          style={activeTab === 'created' ? styles.activeTab : styles.tab} 
-          onClick={() => setActiveTab('created')}
-        >
-          생성 된 방
-        </button>
-        <button 
-          style={activeTab === 'users' ? styles.activeTab : styles.tab} 
-          onClick={() => setActiveTab('users')}
-        >
-          회원가입된 유저
-        </button>
-      </div>
-
-      {activeTab === 'created' ? (
-        <>
-          <ul style={styles.chatList}>
-            {createdChats.map((chat, index) => (
-              <li key={`${chat.id}-${index}`} style={styles.chatItem} onClick={() => openChat(chat.id)}>
-                <div style={styles.chatInfo}>
-                  <p style={styles.participants}>{chat.chatName}</p>
-                  <p style={styles.lastMessage}>{chat.lastMessage}</p>
+    <div style={{ padding: '20px' }}>
+      <h2>채팅방 목록</h2>
+      <ul style={{ listStyleType: 'none', padding: 0 }}>
+        {rooms.length > 0 ? (
+          rooms.map((room) => {
+            if (!room.id) return null;
+            const translateX = draggingRoomId === room.id ? Math.min(0, currentX - startX) : 0;
+            return (
+              <li 
+                key={`room-${room.id}`}
+                style={{ 
+                  padding: '10px', 
+                  margin: '8px 0', 
+                  backgroundColor: '#f0f0f0', 
+                  borderRadius: '5px', 
+                  cursor: 'pointer',
+                  transition: 'transform 0.3s ease',
+                  transform: `translateX(${translateX}px)`,
+                  display: 'flex',
+                  flexDirection: 'column', // 채팅방 이름과 메시지를 세로로 정렬
+                  justifyContent: 'center',
+                  position: 'relative'
+                }}
+                onTouchStart={(e) => handleTouchStart(e, room.id)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onClick={() => {
+                  if (!isDragging) {
+                    navigate(`/chat/${room.id}`);
+                    setRooms(prevRooms => 
+                      prevRooms.map(r => 
+                        r.id === room.id ? { ...r, unreadCount: 0 } : r
+                      )
+                    );
+                  }
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{room.chatName}</div>
+                <div style={{ color: '#888', fontSize: '14px' }}>
+                  {room.lastMessageSender && (
+                    <span>
+                      {room.lastMessageSender}: 
+                    </span>
+                  )}
+                  {room.lastMessage || '메시지 없음'}
                 </div>
-                {chat.unreadCount > 0 && (
-                  <div style={styles.unreadCount}>{chat.unreadCount}</div>
+                {room.unreadCount > 0 && (
+                  <div style={{ backgroundColor: 'red', color: 'white', borderRadius: '50%', padding: '5px', minWidth: '20px', textAlign: 'center', alignSelf: 'flex-end', marginTop: '5px' }}>
+                    {room.unreadCount}
+                  </div>
                 )}
+                {/* 삭제 버튼 */}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(room.id);
+                  }}
+                  style={{ 
+                    position: 'absolute',
+                    right: '-80px',
+                    padding: '5px 10px', 
+                    backgroundColor: '#ff4d4d', 
+                    color: 'white', 
+                    border: 'none', 
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    opacity: translateX < -50 ? 1 : 0, 
+                    transition: 'opacity 0.3s ease'
+                  }}
+                >
+                  삭제
+                </button>
               </li>
-            ))}
-          </ul>
-        </>
-      ) : activeTab === 'chats' ? (
-        <>
-          <ul style={styles.chatList}>
-            {chats.map((chat, index) => (
-              <li key={`${chat.id}-${index}`} style={styles.chatItem} onClick={() => openChat(chat.id)}>
-                <div style={styles.chatInfo}>
-                  <p style={styles.participants}>{chat.chatName}</p>
-                  <p style={styles.lastMessage}>{chat.lastMessage}</p>
-                </div>
-                {chat.unreadCount > 0 && (
-                  <div style={styles.unreadCount}>{chat.unreadCount}</div>
-                )}
-              </li>
-            ))}
-          </ul>
-          <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>+</button>
+            );
+          })
+        ) : (
+          <p>현재 표시할 채팅방이 없습니다.</p>
+        )}
+      </ul>
 
-          {/* 모달 렌더링 부분 추가 */}
-          {isModalOpen && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modalContent}>
-                <input 
-                  type="text"
-                  value={newChatName}
-                  onChange={(e) => setNewChatName(e.target.value)}
-                  placeholder="채팅방 이름"
-                  style={styles.input}
-                />
-                <input 
-                  type="text"
-                  value={newChatDescription}
-                  onChange={(e) => setNewChatDescription(e.target.value)}
-                  placeholder="채팅방 설명"
-                  style={styles.input}
-                />
-                <button onClick={handleCreateChat} style={styles.createButton}>채팅방 생성</button>
-                <button onClick={() => setIsModalOpen(false)} style={styles.cancelButton}>취소</button>
-              </div>
-            </div>
-          )}
-        </>
-      ) : activeTab === 'users' ? (
-        <ul style={styles.userList}>
-          {users.map((user, index) => (
-            <li key={`${user.userId}-${index}`} style={styles.userItem}>
-              <p>{user.nickname}</p>
-              <button style={styles.chatButton} onClick={() => startChatWithUser(user)}>
-                채팅하기
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <h2>유저 목록</h2>
+      <ul style={{ listStyleType: 'none', padding: 0 }}>
+        {users.map((user) => (
+          <li 
+            key={`user-${user.uniqueId}`}
+            style={{ 
+              padding: '10px', 
+              margin: '8px 0', 
+              backgroundColor: '#f0f0f0', 
+              borderRadius: '5px', 
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <span>{user.nickname || user.name}</span>
+            <button 
+              onClick={() => createChatRoom(user.uniqueId, user.nickname || user.name)}
+              style={{ padding: '5px 10px', marginLeft: '10px', backgroundColor: '#007BFF', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+            >
+              채팅하기
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    padding: '20px',
-    backgroundColor: '#dfe7fd',  // 채팅방 배경 색상 적용
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  header: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    marginBottom: '20px',
-  },
-  tabContainer: {
-    display: 'flex',
-    marginBottom: '20px',
-  },
-  tab: {
-    flex: 1,
-    padding: '10px',
-    backgroundColor: '#ffffff',
-    borderTop: '1px solid #ddd',
-    borderRight: '1px solid #ddd',
-    borderLeft: '1px solid #ddd',
-    borderBottom: '1px solid #ddd',
-    borderRadius: '8px 8px 0 0',
-    cursor: 'pointer',
-    textAlign: 'center',
-  },
-  activeTab: {
-    flex: 1,
-    padding: '10px',
-    backgroundColor: '#61dafb',
-    borderTop: '1px solid #ddd',
-    borderRight: '1px solid #ddd',
-    borderLeft: '1px solid #ddd',
-    borderBottom: 'none',
-    borderRadius: '8px 8px 0 0',
-    cursor: 'pointer',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  newChatContainer: {
-    display: 'flex',
-    marginBottom: '20px',
-  },
-  input: {
-    flex: 1,
-    padding: '10px',
-    borderRadius: '8px',
-    border: '1px solid #ddd',
-    marginRight: '10px',
-  },
-  createButton: {
-    padding: '10px 20px',
-    borderRadius: '8px',
-    backgroundColor: '#61dafb',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  cancelButton: {
-    padding: '10px 20px',
-    borderRadius: '8px',
-    backgroundColor: '#ccc',
-    border: 'none',
-    cursor: 'pointer',
-    marginTop: '10px'
-  },
-  chatList: {
-    listStyleType: 'none',
-    padding: '0',
-    margin: '0',
-    flex: 1,
-    overflowY: 'auto', // 채팅 목록 스크롤 가능하게 설정
-  },
-  chatItem: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '15px',
-    backgroundColor: '#ffffff', // 각 채팅 아이템의 배경 색상
-    borderRadius: '8px',
-    marginBottom: '10px',
-    cursor: 'pointer',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // 약간의 그림자 추가
-  },
-  chatInfo: {
-    marginLeft: '10px',
-  },
-  participants: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    margin: '0',
-  },
-  lastMessage: {
-    fontSize: '14px',
-    color: '#888',
-    margin: '0',
-  },
-  unreadCount: {
-    backgroundColor: 'red',
-    color: 'white',
-    borderRadius: '50%',
-    padding: '5px 10px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-  },
-  userList: {
-    listStyleType: 'none',
-    padding: '0',
-    margin: '0',
-    flex: 1,
-    overflowY: 'auto', // 사용자 목록 스크롤 가능하게 설정
-  },
-  userItem: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '15px',
-    backgroundColor: '#ffffff', // 각 사용자 아이템의 배경 색상
-    borderRadius: '8px',
-    marginBottom: '10px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // 약간의 그림자 추가
-  },
-  chatButton: {
-    padding: '10px 20px',
-    borderRadius: '8px',
-    backgroundColor: '#61dafb',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  addButton: {
-    padding: '10px',
-    borderRadius: '50%',
-    backgroundColor: '#61dafb',
-    border: 'none',
-    cursor: 'pointer',
-    bottom: '20px',
-    right: '20px',
-    fontSize: '24px',
-    color: 'white',
-    width: '50px',
-    height: '50px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalOverlay: {
-    position: 'fixed',
-    top: '0',
-    left: '0',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000, // 모달이 다른 요소들 위에 나타나도록 설정
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    display: 'flex',
-    flexDirection: 'column',
-    zIndex: 1001, // 모달 콘텐츠가 항상 위에 표시되도록 설정
-  },
 };
 
 export default ChatOverviewPage;

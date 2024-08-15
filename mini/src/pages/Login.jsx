@@ -25,7 +25,7 @@ function Login() {
         event.preventDefault();
     
         try {
-            const response = await fetch('http://chatex.p-e.kr:10000/api/login', {
+            const response = await fetch('http://chatex.p-e.kr/api/auth/login', {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

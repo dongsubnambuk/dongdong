@@ -1,141 +1,198 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useParams } from 'react-router-dom';
-import SockJS from 'sockjs-client';
-import { Stomp } from '@stomp/stompjs';
 
-const ChatPage = () => {
-  const { id } = useParams();
+const ChatPage = ({ updateLastMessage = () => {} }) => {  // 기본값으로 빈 함수 설정
+  const { id: chatRoomId } = useParams();
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const messageEndRef = useRef(null);
-  const stompClient = useRef(null);
-  const nickname = localStorage.getItem('nickname');
-
-  const loggedInUser = {
-    nickname: nickname 
-  };
+  const [message, setMessage] = useState('');
+  const [ws, setWs] = useState(null);
+  const [nicknames, setNicknames] = useState({});
+  const localUserId = localStorage.getItem('UID');
 
   useEffect(() => {
-    // WebSocket 연결 설정
-    const socket = new SockJS('http://chatex.p-e.kr:11000/ws/chat');
-    stompClient.current = Stomp.over(socket);
+    const uniqueId = localUserId;
+    const wsInstance = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${uniqueId}`);
 
-    stompClient.current.connect({}, () => {
-      // 채팅방에 구독
-      stompClient.current.subscribe(`/topic/chat/${id}`, (message) => {
-        onMessageReceived(JSON.parse(message.body));
+    wsInstance.onopen = () => {
+      console.log('WebSocket 연결 성공');
+      setWs(wsInstance);
+      updateMessage(chatRoomId);
+    };
+
+    wsInstance.onmessage = async (event) => {
+      const newMessage = JSON.parse(event.data);
+      const { userId } = newMessage;
+
+      if (!nicknames[userId]) {
+        try {
+          const response = await getNicknameByUniqueId(userId);
+          setNicknames(prev => ({ ...prev, [userId]: response.data.nickname }));
+        } catch (error) {
+          console.error('Failed to fetch nickname:', error);
+        }
+      }
+
+      // 메시지 추가 후 시간순으로 정렬
+      setMessages(prevMessages => {
+        const updatedMessages = [...prevMessages, newMessage];
+        return updatedMessages.sort((a, b) => new Date(a.sendTime) - new Date(b.sendTime));
       });
-    });
+
+      // 마지막 메시지를 목록에 업데이트
+      updateLastMessage(chatRoomId, newMessage.messageContent, newMessage.userId);
+    };
+
+    wsInstance.onclose = () => {
+      console.log('WebSocket 연결 종료');
+    };
 
     return () => {
-      if (stompClient.current) {
-        stompClient.current.disconnect();
+      if (wsInstance) {
+        wsInstance.close();
       }
     };
-  }, [id]);
+  }, [chatRoomId]);
 
-  const onMessageReceived = (message) => {
-    setMessages((prevMessages) => [...prevMessages, message]);
-  };
-
-  const handleSendMessage = () => {
-    if (newMessage.trim() !== '') {
-      const chatMessage = {
-        sender: loggedInUser.nickname,
-        text: newMessage,
-        roomId: id
-      };
-
-      // 전송된 메시지를 로컬 상태에 즉시 추가
-      setMessages((prevMessages) => [...prevMessages, chatMessage]);
-
-      // WebSocket을 통해 서버로 메시지 전송
-      stompClient.current.send(`/app/chat.sendMessage/${id}`, {}, JSON.stringify(chatMessage));
-      setNewMessage('');
+  const updateMessage = async (chatRoomId) => {
+    try {
+      const response = await axios.get(`http://chatex.p-e.kr/api/message/sender/${chatRoomId}/read-all`);
+      setMessages(response.data);
+    } catch (error) {
+      console.error('Failed to update messages:', error);
     }
   };
 
-  useEffect(() => {
-    // 새로운 메시지가 추가될 때 스크롤을 최신 메시지로 이동
-    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const getNicknameByUniqueId = async (uniqueId) => {
+    try {
+      return await axios.get(`http://chatex.p-e.kr/api/chat/user/${uniqueId}`);
+    } catch (error) {
+      console.error('Failed to fetch nickname:', error);
+      throw error;
+    }
+  };
+
+  const sendMessage = async () => {
+    if (message.trim() !== '') {
+      const messageData = {
+        userId: localUserId,
+        messageContent: message,
+        chatRoomId: chatRoomId,
+      };
+
+      try {
+        await axios.post(`http://chatex.p-e.kr/api/message/receiver`, messageData);
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(messageData));
+          const newMessage = { ...messageData, sendTime: new Date().toISOString() };
+          setMessages([...messages, newMessage]);
+          setMessage('');
+
+          // 마지막 메시지를 목록에 업데이트
+          updateLastMessage(chatRoomId, newMessage.messageContent, localUserId);
+        } else {
+          console.error('WebSocket is not connected');
+        }
+      } catch (error) {
+        console.error('Failed to send message:', error.response ? error.response.data : error.message);
+
+        if (error.response && error.response.status === 500) {
+          console.error('서버에서 반환된 메시지:', error.response.data);
+          alert('메시지를 전송할 수 없습니다. 해당 사용자가 채팅방에 포함되어 있는지 확인해주세요.');
+        }
+      }
+    }
+  };
 
   return (
     <div style={styles.container}>
-      <div style={styles.chatContainer}>
-        {messages.map((msg, index) => (
+      <h2 style={styles.title}>채팅방: {chatRoomId}</h2>
+      <div style={styles.messageContainer}>
+        {Array.isArray(messages) && messages.map((msg, index) => (
           <div
             key={index}
             style={{
               ...styles.message,
-              alignSelf: msg.sender === loggedInUser.nickname ? 'flex-end' : 'flex-start',
-              backgroundColor: msg.sender === loggedInUser.nickname ? '#dcf8c6' : '#ffffff',
+              alignSelf: msg.userId === localUserId ? 'flex-end' : 'flex-start',
+              backgroundColor: msg.userId === localUserId ? '#DCF8C6' : '#FFFFFF',
             }}
           >
-            {msg.text}
+            <b style={styles.nickname}>{nicknames[msg.userId] || msg.userId}</b>: {msg.messageContent}
           </div>
         ))}
-        <div ref={messageEndRef} />
       </div>
       <div style={styles.inputContainer}>
-      // (이전 코드 계속)
-      <input
-        type="text"
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-        style={styles.input}
-        placeholder="메시지 입력..."
-      />
-      <button onClick={handleSendMessage} style={styles.sendButton}>
-        전송
-      </button>
+        <input 
+          type="text" 
+          value={message} 
+          onChange={e => setMessage(e.target.value)} 
+          onKeyPress={e => e.key === 'Enter' ? sendMessage() : null} 
+          style={styles.input}
+          placeholder="메시지를 입력하세요..."
+        />
+        <button onClick={sendMessage} style={styles.sendButton}>전송</button>
+      </div>
     </div>
-  </div>
   );
 };
 
 const styles = {
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-  },
-  chatContainer: {
-    flex: 1,
     padding: '20px',
-    backgroundColor: '#dfe7fd',  // 채팅방 배경 색상 적용
-    overflowY: 'scroll',
+    maxWidth: '600px',
+    margin: '0 auto',
+    backgroundColor: '#ffffff',
+    borderRadius: '8px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+  },
+  title: {
+    marginBottom: '20px',
+    textAlign: 'center',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  messageContainer: {
+    marginBottom: '20px',
+    backgroundColor: '#f9f9f9',
+    padding: '15px',
+    borderRadius: '8px',
+    maxHeight: '400px',
+    overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
   },
   message: {
-    padding: '10px 15px',
-    borderRadius: '20px',
     marginBottom: '10px',
+    padding: '10px',
+    borderRadius: '8px',
     maxWidth: '60%',
     wordWrap: 'break-word',
   },
+  nickname: {
+    fontWeight: 'bold',
+    color: '#007BFF',
+  },
   inputContainer: {
     display: 'flex',
-    padding: '10px',
-    backgroundColor: '#ffffff',
-    borderTop: '1px solid #ddd',
+    alignItems: 'center',
   },
   input: {
     flex: 1,
     padding: '10px',
-    borderRadius: '20px',
-    border: '1px solid #ddd',
+    borderRadius: '8px',
+    border: '1px solid #ccc',
     marginRight: '10px',
   },
   sendButton: {
     padding: '10px 20px',
-    borderRadius: '20px',
-    backgroundColor: '#61dafb',
+    backgroundColor: '#007BFF',
+    color: '#fff',
     border: 'none',
+    borderRadius: '8px',
     cursor: 'pointer',
-  },
+  }
 };
 
 export default ChatPage;
-

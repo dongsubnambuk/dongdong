@@ -14,7 +14,7 @@ const MainPage = () => {
     // 로그인한 경우에만 fetch 요청을 보냄
     if (token && email) {
       const handleget = async () => {
-        const response = await fetch(`http://chatex.p-e.kr:10000/api/user?email=${email}`, {
+        const response = await fetch(`http://chatex.p-e.kr/api/auth/user?email=${email}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

@@ -10,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/chat/user")
+@CrossOrigin(origins = {"http://localhost:3000", "http://192.168.0.6:3000"})
 @RequiredArgsConstructor
 public class UserInfoController {
 

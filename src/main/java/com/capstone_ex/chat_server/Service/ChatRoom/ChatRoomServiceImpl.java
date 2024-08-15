@@ -3,6 +3,7 @@ package com.capstone_ex.chat_server.Service.ChatRoom;
 import com.capstone_ex.chat_server.DAO.ChatRoom.ChatRoomDAO;
 import com.capstone_ex.chat_server.DAO.User.UserInfoDAO;
 import com.capstone_ex.chat_server.DTO.ChatRoom.ChatRoomDTO;
+import com.capstone_ex.chat_server.DTO.UserInfoDTO;
 import com.capstone_ex.chat_server.Entity.ChatRoom.ChatRoomEntity;
 import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 import com.capstone_ex.chat_server.Repository.ChatRoomRepository;
@@ -78,5 +79,36 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new IllegalArgumentException("User ID is invalid or does not exist.");
         }
         chatRoomDAO.removeUserFromChatRoom(user, chatRoomId);
+    }
+
+    @Override
+    public List<UserInfoDTO> getUsersInChatRoom(Long chatRoomId) {
+        ChatRoomEntity chatRoom = chatRoomDAO.getChatRoomById(chatRoomId);
+        if (chatRoom == null) {
+            throw new IllegalArgumentException("ChatRoom not found");
+        }
+        return chatRoom.getUsers().stream()
+                .map(user -> new UserInfoDTO(user.getUniqueId()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Long getUserCountInChatRoom(Long chatRoomId) {
+        ChatRoomEntity chatRoom = chatRoomDAO.getChatRoomById(chatRoomId);
+        if (chatRoom == null) {
+            throw new IllegalArgumentException("ChatRoom not found");
+        }
+        return (long) chatRoom.getUsers().size();
+    }
+
+    @Override
+    public void saveChatRoom(ChatRoomEntity chatRoom) {
+        chatRoomRepository.save(chatRoom);
+    }
+
+    @Override
+    public List<ChatRoomDTO> getChatRoomsForUser(String uniqueId) {
+        List<ChatRoomEntity> chatRooms = chatRoomDAO.findChatRoomsByUserUniqueId(uniqueId);
+        return chatRooms.stream().map(ChatRoomDTO::new).collect(Collectors.toList());
     }
 }

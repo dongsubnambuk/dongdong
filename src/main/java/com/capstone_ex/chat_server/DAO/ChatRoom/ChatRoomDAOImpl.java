@@ -28,7 +28,9 @@ public class ChatRoomDAOImpl implements ChatRoomDAO {
                 .creatorId(creatorId)  // creatorId를 String으로 설정
                 .users(new HashSet<>()) // 초기 users 설정
                 .build();
-
+        UserInfoEntity creator = userInfoRepository.findByUniqueId(creatorId)
+                .orElseThrow(() -> new IllegalArgumentException("User ID is invalid or does not exist."));
+        chatRoom.getUsers().add(creator);
         return chatRoomRepository.save(chatRoom);
     }
 
@@ -67,5 +69,12 @@ public class ChatRoomDAOImpl implements ChatRoomDAO {
             chatRoom.getUsers().remove(user);
             chatRoomRepository.save(chatRoom);
         }
+    }
+
+    @Override
+    public List<ChatRoomEntity> findChatRoomsByUserUniqueId(String uniqueId) {
+        UserInfoEntity user = userInfoRepository.findByUniqueId(uniqueId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return chatRoomRepository.findByUsersContaining(user);
     }
 }

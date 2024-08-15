@@ -13,4 +13,6 @@ public interface ChatRoomDAO {
     void deleteChatRoom(Long chatRoomId);
     void addUserToChatRoom(String uniqueId, Long chatRoomId);
     void removeUserFromChatRoom(UserInfoEntity user, Long chatRoomId);
+    List<ChatRoomEntity> findChatRoomsByUserUniqueId(String uniqueId);
+
 }

@@ -1,6 +1,7 @@
 package com.capstone_ex.chat_server.Service.ChatRoom;
 
 import com.capstone_ex.chat_server.DTO.ChatRoom.ChatRoomDTO;
+import com.capstone_ex.chat_server.DTO.UserInfoDTO;
 import com.capstone_ex.chat_server.Entity.ChatRoom.ChatRoomEntity;
 import com.capstone_ex.chat_server.Entity.User.UserInfoEntity;
 
@@ -18,4 +19,12 @@ public interface ChatRoomService {
     void addUserToChatRoom(String userId, Long chatRoomId);
 
     void removeUserFromChatRoom(String userId, Long chatRoomId);
+
+    void saveChatRoom(ChatRoomEntity chatRoom);
+
+    List<UserInfoDTO> getUsersInChatRoom(Long chatRoomId);
+
+    Long getUserCountInChatRoom(Long chatRoomId);
+
+    List<ChatRoomDTO> getChatRoomsForUser(String uniqueId);
 }

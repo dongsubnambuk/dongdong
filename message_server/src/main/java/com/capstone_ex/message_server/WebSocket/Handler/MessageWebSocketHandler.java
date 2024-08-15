@@ -11,16 +11,17 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 @Component
 public class MessageWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
-    // 추가된 메서드
     @Getter
-    private final Set<WebSocketSession> sessions = new HashSet<>();
+    private static final ConcurrentHashMap<String, List<WebSocketSession>> userSessions = new ConcurrentHashMap<>();
 
     public MessageWebSocketHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -28,51 +29,93 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        // URI에서 쿼리 파라미터 추출
         URI uri = session.getUri();
-        Map<String, String> queryParams = UriComponentsBuilder.fromUri(uri)
+        String userId = UriComponentsBuilder.fromUri(uri)
                 .build()
                 .getQueryParams()
-                .toSingleValueMap();
+                .getFirst("userId");
 
-        // 사용자 ID를 세션에 저장
-        String userId = queryParams.get("userId");
         if (userId != null) {
-            session.getAttributes().put("userId", userId);
+            userSessions.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(session);
+            System.out.println("새로운 WebSocket 연결: " + session.getId() + " (User ID: " + userId + ")");
+            //session.sendMessage(new TextMessage("WebSocket connection established successfully for userId: " + userId));
+        } else {
+            System.out.println("WebSocket 연결 시 userId가 없음: " + session.getId());
+            session.close(CloseStatus.BAD_DATA);
         }
-
-        // 세션 관리
-        sessions.add(session);
-        System.out.println("새로운 WebSocket 연결: " + session.getId() + " (User ID: " + userId + ")");
-    }
-
-    @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        // 클라이언트로부터 받은 메시지를 처리
-        System.out.println("메시지 수신: " + message.getPayload());
-        broadcastMessage(session, message);
+        printAllSessions();
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        // 클라이언트가 연결을 닫았을 때 세션을 제거
-        sessions.remove(session);
+        removeSession(session);
         System.out.println("WebSocket 연결 종료: " + session.getId());
+        printAllSessions();
     }
 
-    private void broadcastMessage(WebSocketSession senderSession, TextMessage message) throws IOException {
-        // 모든 연결된 세션에 메시지를 전송 (브로드캐스트)
-        for (WebSocketSession session : sessions) {
-            if (session.isOpen() && !session.getId().equals(senderSession.getId())) {
-                session.sendMessage(message);
+    private void removeSession(WebSocketSession session) {
+        String userId = (String) session.getAttributes().get("userId");
+        List<WebSocketSession> sessions = userSessions.get(userId);
+        if (sessions != null) {
+            sessions.remove(session);
+            if (sessions.isEmpty()) {
+                userSessions.remove(userId);
             }
         }
     }
 
-    @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        // WebSocket 전송 중 오류가 발생했을 때 처리
-        System.out.println("WebSocket 오류: " + exception.getMessage());
+    public void printAllSessions() {
+        System.out.println("현재 연결된 모든 세션:");
+        userSessions.forEach((userId, sessions) -> {
+            System.out.println("User ID: " + userId);
+            sessions.forEach(session ->
+                    System.out.println("Session ID: " + session.getId())
+            );
+        });
     }
 
+    public void sendMessageToAll(String messageContent) {
+        TextMessage message = new TextMessage(messageContent);
+        userSessions.values().stream()
+                .flatMap(List::stream)
+                .forEach(session -> {
+                    try {
+                        if (session.isOpen()) {
+                            session.sendMessage(message);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+    }
+
+    public void sendMessageToSpecificUser(String userId, String messageContent) {
+        List<WebSocketSession> sessions = userSessions.get(userId);
+        if (sessions != null) {
+            sessions.forEach(session -> {
+                try {
+                    if (session.isOpen()) {
+                        session.sendMessage(new TextMessage(messageContent));
+                        System.out.println("Message sent to session for userId: " + userId + " | Content: " + messageContent);
+                    } else {
+                        System.out.println("Session closed for userId: " + userId);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+        } else {
+            System.out.println("No active session found for userId: " + userId);
+        }
+    }
+
+    public void sendMessageToSpecificUsers(Set<String> userIds, String messageContent) {
+        userIds.forEach(userId -> sendMessageToSpecificUser(userId, messageContent));
+    }
+
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        removeSession(session);
+        System.out.println("WebSocket 오류: " + exception.getMessage());
+    }
 }

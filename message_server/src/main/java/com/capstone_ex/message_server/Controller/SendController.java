@@ -8,6 +8,7 @@ import com.capstone_ex.message_server.WebSocket.Controller.MessageWebSocketContr
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,28 +22,37 @@ public class SendController {
     private final MessageWebSocketController messageWebSocketController;
     private final UserRepository userRepository;
     private final SendDAO sendDAO;
+    private final ObjectMapper objectMapper;
 
 
-    public SendController(MessageWebSocketController messageWebSocketController, UserRepository userRepository, SendDAO sendDAO) {
+    public SendController(MessageWebSocketController messageWebSocketController, UserRepository userRepository, SendDAO sendDAO, ObjectMapper objectMapper) {
         this.messageWebSocketController = messageWebSocketController;
         this.userRepository = userRepository;
         this.sendDAO = sendDAO;
+        this.objectMapper = objectMapper;
     }
 
-    public void sendMessageToChatRoom(Long chatRoomId, String messageContent) {
+    public void sendMessageToChatRoom(Long chatRoomId, SendDTO sendDTO) {
         // DB에서 해당 chatRoomId에 속한 모든 userId를 가져옴
         Set<String> userIds = userRepository.findByChatRoomId(chatRoomId)
                 .stream()
                 .map(UserEntity::getUserId)
                 .collect(Collectors.toSet());
 
-        // WebSocket을 통해 해당 userId에 해당하는 모든 세션에 메시지 전송
-        messageWebSocketController.sendMessageToSpecificUsers(userIds, messageContent);
+        try {
+            // SendDTO 객체를 JSON으로 변환
+            String messageContent = objectMapper.writeValueAsString(sendDTO);
+
+            // WebSocket을 통해 해당 userId에 해당하는 모든 세션에 메시지 전송
+            messageWebSocketController.sendMessageToSpecificUsers(userIds, messageContent);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @GetMapping("/{chatRoomId}/read-all")
     public ResponseEntity<?> sendAllMessagesInChatRoom(@PathVariable Long chatRoomId) {
-        // SendDAO를 통해 해당 chatRoomId의 모든 메시지를 최신순으로 가져옴
+        // SendDAO를 통해 해당 chatRoomId의 모든 메시지를 최신순의 역순으로 가져옴
         List<SendDTO> sendDTOList = sendDAO.getMessagesByChatRoomId(chatRoomId);
 
         // DB에서 해당 chatRoomId에 속한 모든 userId를 가져옴
@@ -53,7 +63,8 @@ public class SendController {
             for (String userId : userIds) {
                 for (SendDTO sendDTO : sendDTOList) {
                     try {
-                        String messageContent = sendDTO.getMessageContent();
+                        // SendDTO 객체를 JSON으로 변환
+                        String messageContent = objectMapper.writeValueAsString(sendDTO);
                         messageWebSocketController.sendMessageToSpecificUser(userId, messageContent);
                         System.out.println("Sent message to user " + userId + ": " + messageContent);
                     } catch (IOException e) {

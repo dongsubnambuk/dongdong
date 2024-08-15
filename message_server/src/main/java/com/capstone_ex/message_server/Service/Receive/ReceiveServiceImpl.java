@@ -1,6 +1,7 @@
 package com.capstone_ex.message_server.Service.Receive;
 
 import com.capstone_ex.message_server.DAO.Receive.ReceiveDAO;
+import com.capstone_ex.message_server.DTO.MessageDTO;
 import com.capstone_ex.message_server.DTO.ReceiveDTO;
 import com.capstone_ex.message_server.Repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,9 @@ public class ReceiveServiceImpl implements ReceiveService{
     }
 
     @Override
-    public void processReceivedMessage(ReceiveDTO receiveDTO) {
-        receiveDAO.createNewMessage(receiveDTO);
+    public MessageDTO processReceivedMessage(ReceiveDTO receiveDTO) {
         // 메시지를 데이터베이스에 저장
+        return receiveDAO.createNewMessage(receiveDTO);
     }
 
     @Override

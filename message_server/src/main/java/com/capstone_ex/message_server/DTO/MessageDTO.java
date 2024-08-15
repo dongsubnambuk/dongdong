@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MessageDTO {
     private String userId;
-    private String messageId;
+    private Long messageId;
     private Long chatRoomId;
-    private Long checkCount;
     private LocalDateTime sendTime;
 }

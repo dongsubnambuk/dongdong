@@ -76,9 +76,11 @@ public class ChatRoomController {
     }
 
     @DeleteMapping("/{chatRoomId}")
-    public ResponseEntity<Void> deleteChatRoom(@PathVariable Long chatRoomId) {
+    public ResponseEntity<?> deleteChatRoom(@PathVariable Long chatRoomId) {
+        // 삭제한 유저 업데이트
+        communicationService.callRemoveChatRoom(chatRoomId);
         chatRoomService.deleteChatRoom(chatRoomId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok("삭제 성공");
     }
 
     @PostMapping("/{chatRoomId}/add-user/{uniqueId}")

@@ -1,6 +1,7 @@
 package com.capstone_ex.chat_server.Service.Communication;
 
 import com.capstone_ex.chat_server.DTO.ExternalDTO.ExternalUserInfoDTO;
+import com.capstone_ex.chat_server.Repository.UserInfoRepository;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.http.*;
@@ -16,11 +17,13 @@ public class CommunicationServiceImpl implements CommunicationService{
 
     private final DiscoveryClient discoveryClient;
     private final RestTemplate restTemplate;
+    private final UserInfoRepository userInfoRepository;
 
 
-    public CommunicationServiceImpl(DiscoveryClient discoveryClient, RestTemplate restTemplate) {
+    public CommunicationServiceImpl(DiscoveryClient discoveryClient, RestTemplate restTemplate, UserInfoRepository userInfoRepository) {
         this.discoveryClient = discoveryClient;
         this.restTemplate = restTemplate;
+        this.userInfoRepository = userInfoRepository;
     }
 
 
@@ -80,7 +83,16 @@ public class CommunicationServiceImpl implements CommunicationService{
         }
     }
 
+    @Override
+    public void callRemoveChatRoom(Long chatRoomId) {
+        // DB에서 해당 chatRoomId에 속한 모든 uniqueId를 가져옴
+        List<String> uniqueIds = userInfoRepository.findUniqueIdsByChatRoomId(chatRoomId);
 
+        // 각 uniqueId에 대해 remove-user 요청을 보냄
+        for (String uniqueId : uniqueIds) {
+            callDeleteChatUser(chatRoomId, uniqueId);
+        }
+    }
 
     @Override
     public void callDeleteChatUser(Long chatRoomId, String uniqueId) {

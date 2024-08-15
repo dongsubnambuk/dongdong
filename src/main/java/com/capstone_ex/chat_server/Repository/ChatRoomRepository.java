@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoomEntity, Long> {
     List<ChatRoomEntity> findByUsersContaining(UserInfoEntity user);
+
 }

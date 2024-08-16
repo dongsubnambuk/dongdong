@@ -12,10 +12,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 @Component
 public class MessageWebSocketHandler extends TextWebSocketHandler {
@@ -38,7 +38,6 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         if (userId != null) {
             userSessions.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>()).add(session);
             System.out.println("새로운 WebSocket 연결: " + session.getId() + " (User ID: " + userId + ")");
-            //session.sendMessage(new TextMessage("WebSocket connection established successfully for userId: " + userId));
         } else {
             System.out.println("WebSocket 연결 시 userId가 없음: " + session.getId());
             session.close(CloseStatus.BAD_DATA);
@@ -48,20 +47,44 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        removeSession(session);
         System.out.println("WebSocket 연결 종료: " + session.getId());
+        removeSession(session);
         printAllSessions();
     }
 
     private void removeSession(WebSocketSession session) {
         String userId = (String) session.getAttributes().get("userId");
-        List<WebSocketSession> sessions = userSessions.get(userId);
-        if (sessions != null) {
-            sessions.remove(session);
-            if (sessions.isEmpty()) {
-                userSessions.remove(userId);
+        if (userId != null) {
+            List<WebSocketSession> sessions = userSessions.get(userId);
+            if (sessions != null) {
+                sessions.remove(session);
+                if (sessions.isEmpty()) {
+                    userSessions.remove(userId);
+                }
+                System.out.println("세션 제거됨: " + session.getId() + " (User ID: " + userId + ")");
             }
+        } else {
+            // sessionId를 사용하여 세션을 제거하는 로직 추가
+            for (Map.Entry<String, List<WebSocketSession>> entry : userSessions.entrySet()) {
+                List<WebSocketSession> sessions = entry.getValue();
+                sessions.removeIf(s -> s.getId().equals(session.getId()));
+                if (sessions.isEmpty()) {
+                    userSessions.remove(entry.getKey());
+                }
+            }
+            System.out.println("세션 제거됨 (sessionId로 제거): " + session.getId());
         }
+    }
+
+
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        System.out.println("WebSocket 오류: " + exception.getMessage());
+        removeSession(session);
+    }
+    private String getUserIdFromSession(WebSocketSession session) {
+        // session에서 userId 가져오기 (정확한 userId 추출을 위해 메서드로 분리)
+        return (String) session.getAttributes().get("userId");
     }
 
     public void printAllSessions() {
@@ -113,9 +136,4 @@ public class MessageWebSocketHandler extends TextWebSocketHandler {
         userIds.forEach(userId -> sendMessageToSpecificUser(userId, messageContent));
     }
 
-    @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        removeSession(session);
-        System.out.println("WebSocket 오류: " + exception.getMessage());
-    }
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 
-const ChatPage = ({ updateLastMessage = () => {} }) => {  // 기본값으로 빈 함수 설정
+const ChatPage = ({ updateLastMessage = () => {} }) => {
   const { id: chatRoomId } = useParams();
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
@@ -33,13 +33,11 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {  // 기본값으로 빈
         }
       }
 
-      // 메시지 추가 후 시간순으로 정렬
       setMessages(prevMessages => {
         const updatedMessages = [...prevMessages, newMessage];
         return updatedMessages.sort((a, b) => new Date(a.sendTime) - new Date(b.sendTime));
       });
 
-      // 마지막 메시지를 목록에 업데이트
       updateLastMessage(chatRoomId, newMessage.messageContent, newMessage.userId);
     };
 
@@ -89,7 +87,6 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {  // 기본값으로 빈
           setMessages([...messages, newMessage]);
           setMessage('');
 
-          // 마지막 메시지를 목록에 업데이트
           updateLastMessage(chatRoomId, newMessage.messageContent, localUserId);
         } else {
           console.error('WebSocket is not connected');
@@ -106,93 +103,22 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {  // 기본값으로 빈
   };
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>채팅방: {chatRoomId}</h2>
-      <div style={styles.messageContainer}>
+    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
+      {/* 문제의 요소를 삭제하거나 주석 처리 */}
+      <h2 style={{ marginBottom: '20px', textAlign: 'center', fontSize: '24px', fontWeight: 'bold', color: '#333' }}>채팅방: {chatRoomId}</h2>
+      <div style={{ marginBottom: '20px', backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {Array.isArray(messages) && messages.map((msg, index) => (
-          <div
-            key={index}
-            style={{
-              ...styles.message,
-              alignSelf: msg.userId === localUserId ? 'flex-end' : 'flex-start',
-              backgroundColor: msg.userId === localUserId ? '#DCF8C6' : '#FFFFFF',
-            }}
-          >
-            <b style={styles.nickname}>{nicknames[msg.userId] || msg.userId}</b>: {msg.messageContent}
+          <div key={index} style={{ marginBottom: '10px', padding: '10px', borderRadius: '8px', maxWidth: '60%', wordWrap: 'break-word', alignSelf: msg.userId === localUserId ? 'flex-end' : 'flex-start', backgroundColor: msg.userId === localUserId ? '#DCF8C6' : '#FFFFFF' }}>
+            <b style={{ fontWeight: 'bold', color: '#007BFF' }}>{nicknames[msg.userId] || msg.userId}</b>: {msg.messageContent}
           </div>
         ))}
       </div>
-      <div style={styles.inputContainer}>
-        <input 
-          type="text" 
-          value={message} 
-          onChange={e => setMessage(e.target.value)} 
-          onKeyPress={e => e.key === 'Enter' ? sendMessage() : null} 
-          style={styles.input}
-          placeholder="메시지를 입력하세요..."
-        />
-        <button onClick={sendMessage} style={styles.sendButton}>전송</button>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <input type="text" value={message} onChange={e => setMessage(e.target.value)} onKeyPress={e => e.key === 'Enter' ? sendMessage() : null} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc', marginRight: '10px' }} placeholder="메시지를 입력하세요..." />
+        <button onClick={sendMessage} style={{ padding: '10px 20px', backgroundColor: '#007BFF', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>전송</button>
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    padding: '20px',
-    maxWidth: '600px',
-    margin: '0 auto',
-    backgroundColor: '#ffffff',
-    borderRadius: '8px',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-  },
-  title: {
-    marginBottom: '20px',
-    textAlign: 'center',
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  messageContainer: {
-    marginBottom: '20px',
-    backgroundColor: '#f9f9f9',
-    padding: '15px',
-    borderRadius: '8px',
-    maxHeight: '400px',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  message: {
-    marginBottom: '10px',
-    padding: '10px',
-    borderRadius: '8px',
-    maxWidth: '60%',
-    wordWrap: 'break-word',
-  },
-  nickname: {
-    fontWeight: 'bold',
-    color: '#007BFF',
-  },
-  inputContainer: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  input: {
-    flex: 1,
-    padding: '10px',
-    borderRadius: '8px',
-    border: '1px solid #ccc',
-    marginRight: '10px',
-  },
-  sendButton: {
-    padding: '10px 20px',
-    backgroundColor: '#007BFF',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-  }
 };
 
 export default ChatPage;

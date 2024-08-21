@@ -32,4 +32,10 @@ public class CheckController {
         messageWebSocketHandler.sendMessageToAll(message);
         return ResponseEntity.ok("Success");
     }
+
+    @GetMapping("/read-status/{chatRoomId}")
+    public ResponseEntity<?> sendReadStatusToChatRoom(@PathVariable Long chatRoomId) {
+        messageWebSocketHandler.sendReadStatusToChatRoom(chatRoomId);
+        return ResponseEntity.ok("Read status sent to chat room " + chatRoomId);
+    }
 }

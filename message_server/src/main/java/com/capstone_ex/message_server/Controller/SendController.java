@@ -20,13 +20,15 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = {"http://localhost:3000", "http://192.168.0.6:3000"})
 public class SendController {
     private final MessageWebSocketController messageWebSocketController;
+    private final CheckController checkController;
     private final UserRepository userRepository;
     private final SendDAO sendDAO;
     private final ObjectMapper objectMapper;
 
 
-    public SendController(MessageWebSocketController messageWebSocketController, UserRepository userRepository, SendDAO sendDAO, ObjectMapper objectMapper) {
+    public SendController(MessageWebSocketController messageWebSocketController, CheckController checkController, UserRepository userRepository, SendDAO sendDAO, ObjectMapper objectMapper) {
         this.messageWebSocketController = messageWebSocketController;
+        this.checkController = checkController;
         this.userRepository = userRepository;
         this.sendDAO = sendDAO;
         this.objectMapper = objectMapper;
@@ -44,10 +46,12 @@ public class SendController {
             String messageContent = objectMapper.writeValueAsString(sendDTO);
 
             // WebSocket을 통해 해당 userId에 해당하는 모든 세션에 메시지 전송
-            messageWebSocketController.sendMessageToSpecificUsers(userIds, messageContent);
+            messageWebSocketController.sendMessageToSpecificUsersInChatRoom(userIds, chatRoomId, messageContent);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // CheckController를 통해 읽음 수 전송
+        checkController.sendReadStatusToChatRoom(chatRoomId);
     }
 
     @GetMapping("/{chatRoomId}/read-all")
@@ -65,7 +69,7 @@ public class SendController {
                     try {
                         // SendDTO 객체를 JSON으로 변환
                         String messageContent = objectMapper.writeValueAsString(sendDTO);
-                        messageWebSocketController.sendMessageToSpecificUser(userId, messageContent);
+                        messageWebSocketController.sendMessageToSpecificUserInChatRoom(userId, chatRoomId,messageContent);
                         System.out.println("Sent message to user " + userId + ": " + messageContent);
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -75,6 +79,7 @@ public class SendController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("실패염");
         }
+        checkController.sendReadStatusToChatRoom(chatRoomId);
         return ResponseEntity.ok("성공쓰");
     }
 }

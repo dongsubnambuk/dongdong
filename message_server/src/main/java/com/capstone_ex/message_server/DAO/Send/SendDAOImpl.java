@@ -29,6 +29,7 @@ public class SendDAOImpl implements SendDAO{
         return messages.stream()
                 .map(message -> SendDTO.builder()
                         .userId(message.getUserId())
+                        .messageId(message.getId())
                         .messageContent(message.getMessageContent())
                         .chatRoomId(message.getChatRoomId())
                         .sendTime(message.getSendTime())

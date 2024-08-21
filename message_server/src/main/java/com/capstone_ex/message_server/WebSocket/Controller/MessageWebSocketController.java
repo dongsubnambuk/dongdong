@@ -15,11 +15,11 @@ public class MessageWebSocketController {
         messageWebSocketHandler.sendMessageToAll(messageContent);
     }
 
-    public void sendMessageToSpecificUser(String userId, String messageContent) {
-        messageWebSocketHandler.sendMessageToSpecificUser(userId, messageContent);
+    public void sendMessageToSpecificUserInChatRoom(String userId, Long chatRoomId, String messageContent) {
+        messageWebSocketHandler.sendMessageToSpecificUserInChatRoom(userId, chatRoomId, messageContent);
     }
 
-    public void sendMessageToSpecificUsers(Set<String> userIds, String messageContent) {
-        messageWebSocketHandler.sendMessageToSpecificUsers(userIds, messageContent);
+    public void sendMessageToSpecificUsersInChatRoom(Set<String> userIds, Long chatRoomId, String messageContent) {
+        messageWebSocketHandler.sendMessageToSpecificUsersInChatRoom(userIds, chatRoomId, messageContent);
     }
 }

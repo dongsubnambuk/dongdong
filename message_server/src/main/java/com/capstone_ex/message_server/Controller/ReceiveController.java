@@ -39,6 +39,7 @@ public class ReceiveController {
             // 메시지 전송
             sendController.sendMessageToChatRoom(receiveDTO.getChatRoomId(), SendDTO.builder()
                     .userId(receiveDTO.getUserId())
+                    .messageId(savedMessage.getMessageId())
                     .messageContent(receiveDTO.getMessageContent())
                     .chatRoomId(receiveDTO.getChatRoomId())
                     .sendTime(savedMessage.getSendTime())  // 저장된 메시지의 시간을 사용

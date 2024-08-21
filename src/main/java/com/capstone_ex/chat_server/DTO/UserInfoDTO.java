@@ -9,8 +9,4 @@ import lombok.*;
 public class UserInfoDTO {
     private String nickname;
     private String uniqueId;
-
-    public UserInfoDTO(String uniqueId) {
-        this.uniqueId = uniqueId;
-    }
 }

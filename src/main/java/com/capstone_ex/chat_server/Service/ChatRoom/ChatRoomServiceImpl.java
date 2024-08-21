@@ -88,7 +88,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             throw new IllegalArgumentException("ChatRoom not found");
         }
         return chatRoom.getUsers().stream()
-                .map(user -> new UserInfoDTO(user.getUniqueId()))
+                .map(user -> new UserInfoDTO(user.getNickname(), user.getUniqueId()))
                 .collect(Collectors.toList());
     }
 

@@ -32,15 +32,8 @@ const ChatOverviewPage = () => {
     ws.onmessage = (event) => {
       const newMessage = JSON.parse(event.data);
       
-      // 새로운 메시지인 경우
-      if (newMessage.type === 'NEW_MESSAGE') {
-        updateChatRoom(newMessage);
-      }
-      
-      // 새로운 채팅방이 생성된 경우
-      if (newMessage.type === 'NEW_CHAT_ROOM') {
-        addNewChatRoom(newMessage.chatRoom);
-      }
+      updateChatRoom(newMessage);
+      addNewChatRoom(newMessage.chatRoom);
     };
 
     ws.onclose = () => {
@@ -49,7 +42,7 @@ const ChatOverviewPage = () => {
   };
 
   const fetchRooms = () => {
-    axios.get('http://chatex.p-e.kr/api/chat/all-chat')
+    axios.get(`http://chatex.p-e.kr/api/chat/${creatorId}/chat-rooms`)
       .then(response => {
         const roomsData = response.data.map(room => ({
           id: room.chatRoomId,
@@ -67,7 +60,7 @@ const ChatOverviewPage = () => {
   };
 
   const fetchUsers = () => {
-    axios.get('http://chatex.p-e.kr/api/chat/user/all')
+    axios.get('http://chatex.p-e.kr/api/auth/users')
       .then(response => {
         setUsers(response.data);
       })
@@ -84,7 +77,7 @@ const ChatOverviewPage = () => {
             ...room,
             lastMessage: newMessage.messageContent,
             lastMessageSender: newMessage.userId === creatorId ? '나' : '상대방',
-            unreadCount: room.unreadCount + 1, // 메시지가 올 때마다 읽지 않은 메시지 수 증가
+            unreadCount: room.unreadCount + 1,
           };
         }
         return room;
@@ -107,31 +100,67 @@ const ChatOverviewPage = () => {
     navigate(`/chat/${roomId}`);
     setRooms(prevRooms =>
       prevRooms.map(room =>
-        room.id === roomId ? { ...room, unreadCount: 0 } : room // 방 클릭 시 읽지 않은 메시지 초기화
+        room.id === roomId ? { ...room, unreadCount: 0 } : room
       )
     );
   };
 
   const createChatRoom = (selectedUserUniqueId, selectedUserNickname) => {
+    // 이미 채팅방이 있는지 확인
+    const existingRoom = rooms.find(room => room.chatName === selectedUserNickname);
+    
+    if (existingRoom) {
+      alert('이미 채팅방이 존재합니다.');
+      navigate(`/chat/${existingRoom.id}`);
+      return;
+    }
+
+    // 새 채팅방 생성
     axios.post('http://chatex.p-e.kr/api/chat/create-chat', {
         chatName: selectedUserNickname,
         creatorId: creatorId,
         selectedId: selectedUserUniqueId
       })
       .then(response => {
-        const newRoom = {
-          id: response.data.chatRoomId,
-          chatName: selectedUserNickname,
-          lastMessage: '',
-          lastMessageSender: '',
-          unreadCount: 0
-        };
-        setRooms(prevRooms => [...prevRooms, newRoom]);
-        navigate(`/chat/${newRoom.id}`);
+        console.log('채팅방 생성 응답:', response.data);  // 응답 확인
+        const newRoomId = response.data.id;
+
+        if (!newRoomId) {
+          alert('채팅방 ID를 생성하는 데 실패했습니다.');
+          return;
+        }
+
+        // 새로 생성된 채팅방으로 이동
+        navigate(`/chat/${newRoomId}`);
+
+        // 잠시 지연 후 WebSocket 연결을 시도
+        setTimeout(() => {
+          if (wsInstance) {
+            wsInstance.close();
+          }
+          const newWs = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
+          setWsInstance(newWs);
+        }, 500); // 500ms 지연 (필요에 따라 시간 조정)
+
+        // 채팅방 목록을 다시 불러오기
         fetchRooms();
       })
       .catch(error => {
         console.error('채팅방 생성에 실패했습니다.', error);
+        alert('채팅방 생성에 실패했습니다.');
+      });
+  };
+
+
+  const deleteChatRoom = (chatRoomId) => {
+    axios.delete(`http://chatex.p-e.kr/api/chat/${chatRoomId}`)
+      .then(() => {
+        setRooms(prevRooms => prevRooms.filter(room => room.id !== chatRoomId));
+        alert('채팅방이 삭제되었습니다.');
+      })
+      .catch(error => {
+        console.error('채팅방 삭제에 실패했습니다.', error);
+        alert('채팅방 삭제에 실패했습니다.');
       });
   };
 
@@ -175,6 +204,27 @@ const ChatOverviewPage = () => {
                   {room.unreadCount}
                 </div>
               )}
+              <button
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '40px',
+                  backgroundColor: '#FF6347',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm('정말로 이 채팅방을 삭제하시겠습니까?')) {
+                    deleteChatRoom(room.id);
+                  }
+                }}
+              >
+                삭제
+              </button>
             </li>
           ))
         ) : (

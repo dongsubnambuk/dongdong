@@ -12,7 +12,7 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {
 
   useEffect(() => {
     const uniqueId = localUserId;
-    const wsInstance = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${uniqueId}`);
+    const wsInstance = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${uniqueId}&chatRoomId=${chatRoomId}`);
 
     wsInstance.onopen = () => {
       console.log('WebSocket 연결 성공');

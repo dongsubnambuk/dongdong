@@ -31,9 +31,16 @@ const ChatOverviewPage = () => {
 
     ws.onmessage = (event) => {
       const newMessage = JSON.parse(event.data);
-      
-      updateChatRoom(newMessage);
-      addNewChatRoom(newMessage.chatRoom);
+
+      if (newMessage.chatRoomId) {
+        if (newMessage.userId !== creatorId) {
+          // 상대방이 메시지를 보낸 경우에만 unreadCount 증가
+          updateChatRoom(newMessage);
+        }
+        addNewChatRoom(newMessage.chatRoom);
+      } else {
+        console.error('Received message with undefined chatRoomId:', newMessage);
+      }
     };
 
     ws.onclose = () => {
@@ -77,7 +84,7 @@ const ChatOverviewPage = () => {
             ...room,
             lastMessage: newMessage.messageContent,
             lastMessageSender: newMessage.userId === creatorId ? '나' : '상대방',
-            unreadCount: room.unreadCount + 1,
+            unreadCount: newMessage.userId !== creatorId ? room.unreadCount + 1 : room.unreadCount, // 메시지를 보낸 사용자가 본인이 아닐 경우에만 unreadCount 증가
           };
         }
         return room;
@@ -86,6 +93,11 @@ const ChatOverviewPage = () => {
   };
 
   const addNewChatRoom = (newRoom) => {
+    if (!newRoom || !newRoom.chatRoomId) {
+      console.error('Cannot add a chat room without chatRoomId:', newRoom);
+      return;
+    }
+
     setRooms(prevRooms => [...prevRooms, {
       id: newRoom.chatRoomId,
       chatName: newRoom.chatName,
@@ -96,62 +108,6 @@ const ChatOverviewPage = () => {
     }]);
   };
 
-  const handleRoomClick = (roomId) => {
-    navigate(`/chat/${roomId}`);
-    setRooms(prevRooms =>
-      prevRooms.map(room =>
-        room.id === roomId ? { ...room, unreadCount: 0 } : room
-      )
-    );
-  };
-
-  const createChatRoom = (selectedUserUniqueId, selectedUserNickname) => {
-    // 이미 채팅방이 있는지 확인
-    const existingRoom = rooms.find(room => room.chatName === selectedUserNickname);
-    
-    if (existingRoom) {
-      alert('이미 채팅방이 존재합니다.');
-      navigate(`/chat/${existingRoom.id}`);
-      return;
-    }
-
-    // 새 채팅방 생성
-    axios.post('http://chatex.p-e.kr/api/chat/create-chat', {
-        chatName: selectedUserNickname,
-        creatorId: creatorId,
-        selectedId: selectedUserUniqueId
-      })
-      .then(response => {
-        console.log('채팅방 생성 응답:', response.data);  // 응답 확인
-        const newRoomId = response.data.id;
-
-        if (!newRoomId) {
-          alert('채팅방 ID를 생성하는 데 실패했습니다.');
-          return;
-        }
-
-        // 새로 생성된 채팅방으로 이동
-        navigate(`/chat/${newRoomId}`);
-
-        // 잠시 지연 후 WebSocket 연결을 시도
-        setTimeout(() => {
-          if (wsInstance) {
-            wsInstance.close();
-          }
-          const newWs = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
-          setWsInstance(newWs);
-        }, 500); // 500ms 지연 (필요에 따라 시간 조정)
-
-        // 채팅방 목록을 다시 불러오기
-        fetchRooms();
-      })
-      .catch(error => {
-        console.error('채팅방 생성에 실패했습니다.', error);
-        alert('채팅방 생성에 실패했습니다.');
-      });
-  };
-
-
   const deleteChatRoom = (chatRoomId) => {
     axios.delete(`http://chatex.p-e.kr/api/chat/${chatRoomId}`)
       .then(() => {
@@ -161,6 +117,56 @@ const ChatOverviewPage = () => {
       .catch(error => {
         console.error('채팅방 삭제에 실패했습니다.', error);
         alert('채팅방 삭제에 실패했습니다.');
+      });
+  };
+
+  const handleRoomClick = (roomId) => {
+    if (!roomId) {
+      console.error('Cannot navigate to chat room without roomId');
+      return;
+    }
+
+    navigate(`/chat/${roomId}`);
+    setRooms(prevRooms =>
+      prevRooms.map(room =>
+        room.id === roomId ? { ...room, unreadCount: 0 } : room
+      )
+    );
+  };
+
+  const createChatRoom = (selectedUserUniqueId, selectedUserNickname) => {
+    const existingRoom = rooms.find(room => room.chatName === selectedUserNickname);
+    
+    if (existingRoom) {
+      alert('이미 채팅방이 존재합니다.');
+      navigate(`/chat/${existingRoom.id}`);
+      return;
+    }
+
+    axios.post('http://chatex.p-e.kr/api/chat/create-chat', {
+        chatName: selectedUserNickname,
+        creatorId: creatorId,
+        selectedId: selectedUserUniqueId
+      })
+      .then(response => {
+        const newRoomId = response.data.id;
+
+        if (!newRoomId) {
+          alert('채팅방 ID를 생성하는 데 실패했습니다.');
+          return;
+        }
+
+        navigate(`/chat/${newRoomId}`);
+        if (wsInstance) {
+          wsInstance.close();
+        }
+        const newWs = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
+        setWsInstance(newWs);
+
+        fetchRooms();
+      })
+      .catch(error => {
+        console.error('채팅방 생성에 실패했습니다.', error);
       });
   };
 
@@ -198,7 +204,7 @@ const ChatOverviewPage = () => {
                     textAlign: 'center',
                     position: 'absolute',
                     top: '10px',
-                    right: '10px',
+                    right: '60px',  // 숫자와 삭제 버튼 간의 거리 조정
                   }}
                 >
                   {room.unreadCount}
@@ -208,7 +214,7 @@ const ChatOverviewPage = () => {
                 style={{
                   position: 'absolute',
                   top: '10px',
-                  right: '40px',
+                  right: '10px',
                   backgroundColor: '#FF6347',
                   color: 'white',
                   border: 'none',
@@ -217,7 +223,7 @@ const ChatOverviewPage = () => {
                   cursor: 'pointer',
                 }}
                 onClick={(e) => {
-                  e.stopPropagation();
+                  e.stopPropagation(); // 부모 요소로의 이벤트 전파 방지
                   if (window.confirm('정말로 이 채팅방을 삭제하시겠습니까?')) {
                     deleteChatRoom(room.id);
                   }

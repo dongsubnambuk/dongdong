@@ -14,7 +14,7 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {
 
   useEffect(() => {
     const uniqueId = localUserId;
-    const wsInstance = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${uniqueId}&chatRoomId=${chatRoomId}`);
+    const wsInstance = new WebSocket(`ws://nutrihub.kro.kr:12000/ws/message?userId=${uniqueId}&chatRoomId=${chatRoomId}`);
 
     wsInstance.onopen = () => {
       console.log('WebSocket 연결 성공');
@@ -60,7 +60,7 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {
 
   const updateMessage = async (chatRoomId) => {
     try {
-      const response = await axios.get(`http://chatex.p-e.kr/api/message/sender/${chatRoomId}/read-all`);
+      const response = await axios.get(`http://nutrihub.kro.kr:12000/api/message/sender/${chatRoomId}/read-all`);
       
       console.log('Received response:', response.data); // 서버 응답 전체를 확인
   
@@ -96,7 +96,7 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {
       };
 
       try {
-        await axios.post(`http://chatex.p-e.kr/api/message/receiver`, messageData);
+        await axios.post(`http://nutrihub.kro.kr:12000/api/message/receiver`, messageData);
 
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(messageData));

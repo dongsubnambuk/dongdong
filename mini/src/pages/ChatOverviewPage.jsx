@@ -22,7 +22,7 @@ const ChatOverviewPage = () => {
   }, []);
 
   const connectWebSocket = () => {
-    const ws = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}`);
+    const ws = new WebSocket(`ws://nutrihub.kro.kr:12000/ws/message?userId=${creatorId}`);
 
     ws.onopen = () => {
       console.log('WebSocket 연결 성공');
@@ -34,10 +34,8 @@ const ChatOverviewPage = () => {
 
       if (newMessage.chatRoomId) {
         if (newMessage.userId !== creatorId) {
-          // 상대방이 메시지를 보낸 경우에만 unreadCount 증가
-          updateChatRoom(newMessage);
+          updateChatRoomWithNewMessage(newMessage);
         }
-        addNewChatRoom(newMessage.chatRoom);
       } else {
         console.error('Received message with undefined chatRoomId:', newMessage);
       }
@@ -46,24 +44,6 @@ const ChatOverviewPage = () => {
     ws.onclose = () => {
       console.log('WebSocket 연결 종료');
     };
-  };
-
-  const fetchRooms = () => {
-    axios.get(`http://chatex.p-e.kr/api/chat/${creatorId}/chat-rooms`)
-      .then(response => {
-        const roomsData = response.data.map(room => ({
-          id: room.chatRoomId,
-          chatName: room.chatName,
-          creatorId: room.creatorId,
-          lastMessage: room.lastMessage,
-          lastMessageSender: room.lastMessageSender,
-          unreadCount: room.unreadCount || 0,
-        }));
-        setRooms(roomsData);
-      })
-      .catch(error => {
-        console.error('채팅방 목록을 가져오는데 실패했습니다.', error);
-      });
   };
 
   const fetchUsers = () => {
@@ -76,36 +56,49 @@ const ChatOverviewPage = () => {
       });
   };
 
-  const updateChatRoom = (newMessage) => {
+  const fetchRooms = () => {
+    axios.get(`http://chatex.p-e.kr/api/chat/${creatorId}/chat-rooms`)
+      .then(response => {
+        const roomsData = response.data.map(room => {
+          // 수신자가 현재 사용자라면 생성자의 닉네임을, 그렇지 않다면 상대방 닉네임을 표시
+      
+          return {
+            id: room.chatRoomId,
+            chatName: room.chatName,
+            creatorId: room.creatorId,
+            lastMessage: room.lastMessage,
+            lastMessageSender: room.lastMessageSender,
+            lastMessageTimestamp: room.lastMessageTimestamp || new Date(0), // 기본값: 가장 오래된 날짜
+            unreadCount: room.unreadCount || 0,
+
+          };
+        });
+        setRooms(roomsData);
+      })
+      .catch(error => {
+        console.error('채팅방 목록을 가져오는데 실패했습니다.', error);
+      });
+  };
+
+
+
+  const updateChatRoomWithNewMessage = (newMessage) => {
     setRooms(prevRooms => {
       return prevRooms.map(room => {
         if (room.id === newMessage.chatRoomId) {
+          const isNewMessage = new Date(newMessage.timestamp) > new Date(room.lastMessageTimestamp);
+
           return {
             ...room,
             lastMessage: newMessage.messageContent,
             lastMessageSender: newMessage.userId === creatorId ? '나' : '상대방',
-            unreadCount: newMessage.userId !== creatorId ? room.unreadCount + 1 : room.unreadCount, // 메시지를 보낸 사용자가 본인이 아닐 경우에만 unreadCount 증가
+            lastMessageTimestamp: newMessage.timestamp,
+            unreadCount: isNewMessage ? room.unreadCount + 1 : room.unreadCount,
           };
         }
         return room;
       });
     });
-  };
-
-  const addNewChatRoom = (newRoom) => {
-    if (!newRoom || !newRoom.chatRoomId) {
-      console.error('Cannot add a chat room without chatRoomId:', newRoom);
-      return;
-    }
-
-    setRooms(prevRooms => [...prevRooms, {
-      id: newRoom.chatRoomId,
-      chatName: newRoom.chatName,
-      creatorId: newRoom.creatorId,
-      lastMessage: '',
-      lastMessageSender: '',
-      unreadCount: 0
-    }]);
   };
 
   const deleteChatRoom = (chatRoomId) => {
@@ -160,7 +153,7 @@ const ChatOverviewPage = () => {
         if (wsInstance) {
           wsInstance.close();
         }
-        const newWs = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
+        const newWs = new WebSocket(`ws://nutrihub.kro.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
         setWsInstance(newWs);
 
         fetchRooms();
@@ -188,7 +181,7 @@ const ChatOverviewPage = () => {
               }}
               onClick={() => handleRoomClick(room.id)}
             >
-              <div style={{ fontWeight: 'bold' }}>{room.chatName}</div>
+              <div style={{ fontWeight: 'bold' }}>{room.otherUserNickname || room.chatName}</div> {/* 상대방의 닉네임 또는 생성자 닉네임 표시 */}
               <div style={{ color: '#888', fontSize: '14px' }}>
                 {room.lastMessageSender && `${room.lastMessageSender}: `}
                 {room.lastMessage || '메시지 없음'}

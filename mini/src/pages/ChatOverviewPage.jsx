@@ -60,17 +60,23 @@ const ChatOverviewPage = () => {
     axios.get(`http://chatex.p-e.kr/api/chat/${creatorId}/chat-rooms`)
       .then(response => {
         const roomsData = response.data.map(room => {
-          // 수신자가 현재 사용자라면 생성자의 닉네임을, 그렇지 않다면 상대방 닉네임을 표시
-      
+          // 현재 사용자가 생성자인지 확인
+          const isCreator = room.creatorId === creatorId;
+  
+          // room.users가 정의되어 있는지 확인하고, 생성자의 정보를 찾음
+          const creatorUser = room.users && room.users.find(user => user.uniqueId === room.creatorId);
+          
+          // selectedId 사용자의 경우 creatorNickname 표시
+          const chatName = isCreator ? room.chatName : (creatorUser ? creatorUser.nickname : room.chatName);
+  
           return {
-            id: room.chatRoomId,
-            chatName: room.chatName,
+            id: room.id,
+            chatName: chatName,  // 생성자의 닉네임을 할당
             creatorId: room.creatorId,
             lastMessage: room.lastMessage,
             lastMessageSender: room.lastMessageSender,
             lastMessageTimestamp: room.lastMessageTimestamp || new Date(0), // 기본값: 가장 오래된 날짜
             unreadCount: room.unreadCount || 0,
-
           };
         });
         setRooms(roomsData);
@@ -79,8 +85,7 @@ const ChatOverviewPage = () => {
         console.error('채팅방 목록을 가져오는데 실패했습니다.', error);
       });
   };
-
-
+  
 
   const updateChatRoomWithNewMessage = (newMessage) => {
     setRooms(prevRooms => {
@@ -135,34 +140,41 @@ const ChatOverviewPage = () => {
       navigate(`/chat/${existingRoom.id}`);
       return;
     }
-
-    axios.post('http://chatex.p-e.kr/api/chat/create-chat', {
-        chatName: selectedUserNickname,
-        creatorId: creatorId,
-        selectedId: selectedUserUniqueId
-      })
+  
+    const requestData = {
+      chatName: selectedUserNickname,
+      creatorId: creatorId,
+      selectedId: selectedUserUniqueId
+    };
+  
+    console.log("Creating chat room with data:", requestData);  // 서버로 보낼 데이터 출력
+  
+    axios.post('http://chatex.p-e.kr/api/chat/create-chat', requestData)
       .then(response => {
+        console.log("Server Response:", response.data);  // 서버 응답 데이터 출력
+  
         const newRoomId = response.data.id;
-
+  
         if (!newRoomId) {
           alert('채팅방 ID를 생성하는 데 실패했습니다.');
           return;
         }
-
+  
         navigate(`/chat/${newRoomId}`);
         if (wsInstance) {
           wsInstance.close();
         }
         const newWs = new WebSocket(`ws://nutrihub.kro.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
         setWsInstance(newWs);
-
+  
         fetchRooms();
       })
       .catch(error => {
         console.error('채팅방 생성에 실패했습니다.', error);
+        console.log("Error details:", error.response?.data || error.message);  // 오류 메시지 출력
       });
   };
-
+  
   return (
     <div style={{ padding: '20px' }}>
       <h2>채팅방 목록</h2>
@@ -269,3 +281,6 @@ const ChatOverviewPage = () => {
 };
 
 export default ChatOverviewPage;
+
+
+

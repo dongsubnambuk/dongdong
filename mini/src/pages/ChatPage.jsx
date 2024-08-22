@@ -57,14 +57,9 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {
     };
   }, [chatRoomId]);
 
-
   const updateMessage = async (chatRoomId) => {
     try {
       const response = await axios.get(`http://nutrihub.kro.kr:12000/api/message/sender/${chatRoomId}/read-all`);
-      
-      console.log('Received response:', response.data); // 서버 응답 전체를 확인
-  
-      // response.data가 배열인지 확인합니다.
       if (Array.isArray(response.data)) {
         const sortedMessages = response.data.sort((a, b) => new Date(a.sendTime) - new Date(b.sendTime));
         setMessages(sortedMessages);
@@ -75,7 +70,6 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {
       alert('메시지를 업데이트하는 데 실패했습니다. 서버 연결을 확인하세요.');
     }
   };
-  
 
   const getNicknameByUniqueId = async (uniqueId) => {
     try {
@@ -96,11 +90,12 @@ const ChatPage = ({ updateLastMessage = () => {} }) => {
       };
 
       try {
-        await axios.post(`http://nutrihub.kro.kr:12000/api/message/receiver`, messageData);
+        // HTTP 요청을 통해 메시지를 서버로 전송
+        const response = await axios.post(`http://nutrihub.kro.kr:12000/api/message/receiver`, messageData);
 
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(messageData));
-          const newMessage = { ...messageData, sendTime: new Date().toISOString() };
+          ws.send(JSON.stringify(response.data)); // 서버가 반환한 데이터 전송 (중복 방지)
+          const newMessage = { ...response.data, sendTime: new Date().toISOString() };
           setMessages(prevMessages => {
             const updatedMessages = [...prevMessages, newMessage];
             // 메시지를 시간순서대로 정렬 (오래된 것이 위에 오도록)

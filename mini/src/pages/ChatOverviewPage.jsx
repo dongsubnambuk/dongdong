@@ -22,7 +22,7 @@ const ChatOverviewPage = () => {
   }, []);
 
   const connectWebSocket = () => {
-    const ws = new WebSocket(`ws://nutrihub.kro.kr:12000/ws/message?userId=${creatorId}`);
+    const ws = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}`);
 
     ws.onopen = () => {
       console.log('WebSocket 연결 성공');
@@ -59,27 +59,41 @@ const ChatOverviewPage = () => {
   const fetchRooms = () => {
     axios.get(`http://chatex.p-e.kr/api/chat/${creatorId}/chat-rooms`)
       .then(response => {
-        const roomsData = response.data.map(room => {
-          // 수신자가 현재 사용자라면 생성자의 닉네임을, 그렇지 않다면 상대방 닉네임을 표시
-      
+        const roomsData = response.data.map(async (room) => {
+          const userCount = await fetchUserCount(room.chatRoomId); // 채팅방 인원수 조회
+
           return {
             id: room.chatRoomId,
             chatName: room.chatName,
             creatorId: room.creatorId,
             lastMessage: room.lastMessage,
             lastMessageSender: room.lastMessageSender,
-            lastMessageTimestamp: room.lastMessageTimestamp || new Date(0), // 기본값: 가장 오래된 날짜
+            lastMessageTimestamp: room.lastMessageTimestamp || new Date(0),
             unreadCount: room.unreadCount || 0,
-
+            userCount: userCount || 0, // 채팅방 인원수
           };
         });
-        setRooms(roomsData);
+
+        // 모든 방의 데이터를 Promise.all로 처리
+        Promise.all(roomsData).then(data => {
+          setRooms(data);
+        });
       })
       .catch(error => {
         console.error('채팅방 목록을 가져오는데 실패했습니다.', error);
       });
   };
 
+  const fetchUserCount = async (chatRoomId) => {
+    try {
+      // 채팅방 내 유저 목록을 가져오는 API 호출
+      const response = await axios.get(`http://chatex.p-e.kr/api/chat/${chatRoomId}/users`);
+      return response.data.length; // 유저 목록의 길이를 유저 수로 반환
+    } catch (error) {
+      console.error(`Failed to fetch user list for chat room ${chatRoomId}:`, error);
+      return 0;
+    }
+  };
 
 
   const updateChatRoomWithNewMessage = (newMessage) => {
@@ -153,7 +167,7 @@ const ChatOverviewPage = () => {
         if (wsInstance) {
           wsInstance.close();
         }
-        const newWs = new WebSocket(`ws://nutrihub.kro.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
+        const newWs = new WebSocket(`ws://chatex.p-e.kr:12000/ws/message?userId=${creatorId}&chatRoomId=${newRoomId}`);
         setWsInstance(newWs);
 
         fetchRooms();
@@ -181,10 +195,13 @@ const ChatOverviewPage = () => {
               }}
               onClick={() => handleRoomClick(room.id)}
             >
-              <div style={{ fontWeight: 'bold' }}>{room.otherUserNickname || room.chatName}</div> {/* 상대방의 닉네임 또는 생성자 닉네임 표시 */}
+              <div style={{ fontWeight: 'bold' }}>{room.otherUserNickname || room.chatName}</div>
               <div style={{ color: '#888', fontSize: '14px' }}>
                 {room.lastMessageSender && `${room.lastMessageSender}: `}
                 {room.lastMessage || '메시지 없음'}
+              </div>
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                {room.userCount}명 참여 중
               </div>
               {room.unreadCount > 0 && (
                 <div
@@ -197,7 +214,7 @@ const ChatOverviewPage = () => {
                     textAlign: 'center',
                     position: 'absolute',
                     top: '10px',
-                    right: '60px',  // 숫자와 삭제 버튼 간의 거리 조정
+                    right: '60px',
                   }}
                 >
                   {room.unreadCount}
@@ -216,7 +233,7 @@ const ChatOverviewPage = () => {
                   cursor: 'pointer',
                 }}
                 onClick={(e) => {
-                  e.stopPropagation(); // 부모 요소로의 이벤트 전파 방지
+                  e.stopPropagation();
                   if (window.confirm('정말로 이 채팅방을 삭제하시겠습니까?')) {
                     deleteChatRoom(room.id);
                   }
@@ -269,6 +286,4 @@ const ChatOverviewPage = () => {
 };
 
 export default ChatOverviewPage;
-
-
-
+ 

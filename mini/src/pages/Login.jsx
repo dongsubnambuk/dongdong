@@ -25,13 +25,13 @@ function Login() {
         event.preventDefault();
     
         try {
-            const response = await fetch('http://chatex.p-e.kr/api/auth/login', {
+            const response = await fetch('http://3.37.122.192:8000/api/auth/login', {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    email: email,
+                    username: email,
                     password: password,
                 }),
             });
@@ -40,12 +40,9 @@ function Login() {
     
             if (response.status === 200) {
                 console.log(result);
-                localStorage.setItem("token", result.token);
-                localStorage.setItem("email", result.user.email);
-                localStorage.setItem("nickname", result.user.nickname);
-                localStorage.setItem("UID", result.user.uniqueId);
+                // localStorage.setItem("token", result.token);
                 console.log("로그인 성공");
-                navigate('/'); 
+                // navigate('/'); 
             } else {
                 console.log("로그인 실패");
                 alert("로그인 실패: " + result.message);

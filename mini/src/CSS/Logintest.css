@@ -1,0 +1,57 @@
+.login-container {
+    width: 300px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .login-selection {
+    display: flex;
+    position: relative; /* 상대 위치로 active-indicator 배치 */
+    margin-bottom: 20px;
+  }
+  
+  .login-item {
+    flex: 1;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    position: relative;
+    z-index: 1; /* 선이 위에 올 수 있도록 설정 */
+  }
+  
+  .active-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 50%; /* 두 버튼이 동일하게 나뉘도록 설정 */
+    height: 3px;
+    background-color: blue; /* 기본 색상 */
+    transition: left 0.3s ease; /* 부드러운 애니메이션 효과 */
+  }
+  
+  .user {
+    left: 0; /* 유저 로그인일 때 왼쪽 */
+  }
+  
+  .admin {
+    left: 50%; /* 관리자 로그인일 때 오른쪽 */
+  }
+  
+  .login-form input {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .login-form button {
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
